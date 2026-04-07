@@ -1,84 +1,52 @@
-<script>
-	// Runes for tracking our simple state
-	let isLoggedIn = $state(false);
-	let user = $state("");
-	let pass = $state("");
+<script lang="ts">
+	let isNumberValid = $state(true); // Toggle for demo purposes
+	let showResults = $state(false);
 
-	function signin(e) {
+	const updates = [
+		{ date: "2024-03-20 14:30", status: "Out for delivery" },
+		{ date: "2024-03-20 08:15", status: "Arrived at logistics center" },
+		{ date: "2024-03-19 22:45", status: "In transit" },
+		{ date: "2024-03-19 10:00", status: "Shipment registered" }
+	];
+
+	function handleSubmit(e: SubmitEvent) {
 		e.preventDefault();
-		// In a real app, you'd fetch() to your backend here
-		if (user === "admin" && pass === "1234") {
-			isLoggedIn = true;
-		} else {
-			alert("Access Denied");
-		}
+		showResults = true;
 	}
 </script>
 
-<main>
-	{#if !isLoggedIn}
-		<div class="login-box">
-			<h2>Sign In</h2>
-			<form onsubmit={signin}>
-				<input bind:value={user} placeholder="Username" />
-				<input type="password" bind:value={pass} placeholder="Password" />
-				<button type="submit">Login</button>
-			</form>
-		</div>
-	{:else}
-		<div class="info-box">
-			<h1>Success!</h1>
-			<p>You are now <strong>logged in</strong> as {user}.</p>
-			<button onclick={() => isLoggedIn = false}>Logout</button>
-		</div>
+<div style="padding: 2rem; font-family: sans-serif; max-width: 600px; margin: 0 auto;">
+	<form onsubmit={handleSubmit} style="display: flex; gap: 0.5rem; margin-bottom: 2rem;">
+		<input
+			type="text"
+			pattern={"\\d{1,24}"}
+			minlength="1"
+			maxlength="24"
+			required
+			title="Must be between 1 and 24 digits"
+			placeholder="Tracking number (max 24 digits)..."
+			style="flex: 1; padding: 0.5rem;"
+			oninput={() => (showResults = false)}
+		/>
+		<button type="submit" style="padding: 0.5rem 1rem;">Track</button>
+	</form>
+
+	{#if showResults}
+		{#if !isNumberValid}
+			<p style="color: red;">Incorrect tracking number.</p>
+		{:else}
+			<ul style="padding: 0; list-style: none;">
+				{#each updates as update}
+					<li style="margin-bottom: 0.5rem;">
+						<small style="color: gray;">{update.date}</small> - <strong>{update.status}</strong>
+					</li>
+				{/each}
+			</ul>
+		{/if}
 	{/if}
-</main>
 
-<style>
-	:global(body) {
-		background-color: #f4f7f6;
-		margin: 0;
-		display: flex;
-		justify-content: center;
-		align-items: center;
-		height: 100vh;
-		font-family: sans-serif;
-	}
-
-	.login-box, .info-box {
-		background: white;
-		padding: 2rem;
-		border-radius: 12px;
-		box-shadow: 0 10px 25px rgba(0,0,0,0.1);
-		text-align: center;
-		width: 300px;
-	}
-
-	form {
-		display: flex;
-		flex-direction: column;
-		gap: 0.8rem;
-	}
-
-	input {
-		padding: 10px;
-		border: 1px solid #ddd;
-		border-radius: 4px;
-	}
-
-	button {
-		padding: 10px;
-		background: #4caf50;
-		color: white;
-		border: none;
-		border-radius: 4px;
-		cursor: pointer;
-		font-weight: bold;
-	}
-
-	button:hover {
-		background: #45a049;
-	}
-
-	h1 { color: #2e7d32; }
-</style>
+	<div style="margin-top: 3rem; font-size: 0.9rem; display: flex; justify-content: space-between;">
+		<label><input type="checkbox" bind:checked={isNumberValid} /> Simulate valid number</label>
+		<a href="/login" style="color: inherit; text-decoration: none;">Login</a>
+	</div>
+</div>
