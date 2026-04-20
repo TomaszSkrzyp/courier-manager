@@ -1,5 +1,5 @@
 <script lang="ts">
-	let isNumberValid = $state(true); // Toggle for demo purposes
+	let isNumberValid = $state(true);
 	let showResults = $state(false);
 
 	const updates = [
@@ -47,6 +47,9 @@
 
 	<div style="margin-top: 3rem; font-size: 0.9rem; display: flex; justify-content: space-between;">
 		<label><input type="checkbox" bind:checked={isNumberValid} /> Simulate valid number</label>
-		<a href="/login" style="color: inherit; text-decoration: none;">Login</a>
+		<div style="display: flex; gap: 1rem;">
+			<a href="/login" style="color: inherit; text-decoration: none;">Login</a>
+			<a href="/sendPackage" style="color: inherit; text-decoration: none;">Send Package</a>
+		</div>
 	</div>
 </div>
