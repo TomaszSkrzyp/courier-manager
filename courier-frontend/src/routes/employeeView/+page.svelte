@@ -1,32 +1,45 @@
 <script lang="ts">
     import { auth } from "../../lib/auth.svelte";
     import { goto } from "$app/navigation";
-    
+    import { onMount } from "svelte"; // Dodaj to!
+
     $effect(() => {
         if (!auth.isLoggedIn) goto("/login");
     });
+
     type Status = "None" | "Collected" | "Delivered" | "Damaged" | "Lost";
 
     interface Package {
-        id: string;
+        id: number;         
+        trackingNumber: string;
         city: string;
         status: Status;
         verified: boolean;
     }
 
     const STATUS_ORDER: Status[] = ["None", "Collected", "Delivered", "Damaged", "Lost"];
-    let packages = $state<Package[]>([
-        { id: "401223001", city: "Katowice", status: "None", verified: false },
-        { id: "441005502", city: "Gliwice", status: "Collected", verified: true },
-        { id: "415009903", city: "Chorzów", status: "None", verified: false },
-        { id: "431002205", city: "Tychy", status: "Delivered", verified: true }
-    ]);
+    
+    let packages = $state<Package[]>([]);
+
+    async function fetchParcels() {
+        try {
+            const res = await fetch("http://localhost:8080/api/parcels");
+            if (res.ok) {
+                packages = await res.json();
+            }
+        } catch (err) {
+            console.error("Błąd połączenia:", err);
+        }
+    }
+
+    onMount(() => {
+        fetchParcels();
+    });
 
     const isStaff = $derived(auth.role === "admin" || auth.role === "office");
 
     function canChange(currentStatus: Status, targetStatus: Status): boolean {
         if (isStaff) return true; 
-        // curier can change stataus if previous has been already set
         const currentIndex = STATUS_ORDER.indexOf(currentStatus);
         const targetIndex = STATUS_ORDER.indexOf(targetStatus);
         return targetIndex === currentIndex + 1;
@@ -38,7 +51,6 @@
         }
     }
 </script>
-
 <div>
     <header>
         <h1>Employee View</h1>
@@ -56,7 +68,7 @@
     {#each packages as pkg}
         <div style="margin-bottom: 2rem; border: 1px solid black; padding: 1rem;">
             <div>
-                <strong>ID: {pkg.id}</strong> | City: {pkg.city}
+                <strong>ID: {pkg.trackingNumber}</strong> | City: {pkg.city}
                 <label style="margin-left: 20px;">
                     <input 
                         type="checkbox" 

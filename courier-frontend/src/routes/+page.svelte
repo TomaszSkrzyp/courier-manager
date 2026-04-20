@@ -1,25 +1,40 @@
 <script lang="ts">
-	let isNumberValid = $state(true);
-	let showResults = $state(false);
+    let trackingValue = $state("");
+    let foundParcel = $state<any>(null);
+    let isNumberValid = $state(true);
+    let showResults = $state(false);
 
-	const updates = [
-		{ date: "2024-03-20 14:30", status: "Out for delivery" },
-		{ date: "2024-03-20 08:15", status: "Arrived at logistics center" },
-		{ date: "2024-03-19 22:45", status: "In transit" },
-		{ date: "2024-03-19 10:00", status: "Shipment registered" }
-	];
+    async function handleSubmit(e: SubmitEvent) {
+        e.preventDefault();
 
-	function handleSubmit(e: SubmitEvent) {
-		e.preventDefault();
-		showResults = true;
-	}
+        if (!trackingValue || trackingValue.length !== 24) {
+            isNumberValid = false;
+            showResults = true;
+            return;
+        }
+
+        try {
+            const res = await fetch(`http://localhost:8080/api/parcels/track/${trackingValue}`);
+            if (res.ok) {
+                foundParcel = await res.json();
+                isNumberValid = true;
+            } else {
+                foundParcel = null;
+                isNumberValid = false;
+            }
+        } catch (err) {
+            console.error("Connection error");
+            isNumberValid = false;
+        }
+        showResults = true;
+    }
 </script>
-
 <div style="padding: 2rem; font-family: sans-serif; max-width: 600px; margin: 0 auto;">
 	<form onsubmit={handleSubmit} style="display: flex; gap: 0.5rem; margin-bottom: 2rem;">
 		<input
 			type="text"
 			pattern={"\\d{1,24}"}
+            bind:value={trackingValue}
 			minlength="1"
 			maxlength="24"
 			required
@@ -32,17 +47,17 @@
 	</form>
 
 	{#if showResults}
-		{#if !isNumberValid}
-			<p style="color: red;">Incorrect tracking number.</p>
-		{:else}
-			<ul style="padding: 0; list-style: none;">
-				{#each updates as update}
-					<li style="margin-bottom: 0.5rem;">
-						<small style="color: gray;">{update.date}</small> - <strong>{update.status}</strong>
-					</li>
-				{/each}
-			</ul>
-		{/if}
+    {#if !isNumberValid}
+        <p style="color: red;">Incorrect tracking number.</p>
+    {:else if foundParcel}
+        <div style="background: #f4f4f4; padding: 1rem; border-radius: 8px;">
+            <h3>Parcel Found!</h3>
+            <p>Tracking Number: <strong>{foundParcel.trackingNumber}</strong></p>
+            <p>Destination: <strong>{foundParcel.city}</strong></p>
+            <p>Current Status: {foundParcel.status}</p>
+            
+        </div>
+    {/if}
 	{/if}
 
 	<div style="margin-top: 3rem; font-size: 0.9rem; display: flex; justify-content: space-between;">
