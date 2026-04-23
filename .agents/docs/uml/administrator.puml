@@ -1,0 +1,20 @@
+@startuml
+left to right direction
+skin rose
+
+actor Administrator
+
+rectangle "Courier manager" {
+  usecase (Usuniecie pracownika/kuriera) as (Usuniecie)
+  usecase (Wybranie pracownika/kuriera z listy) as (Wybranie)
+  usecase (Dodanie pracownika/kuriera) as (Dodanie)
+  usecase (Wyświetlenie informacji o kurierze/pracowniku) as (Wyswietlenie)
+  
+  
+  Administrator --> (Usuniecie)
+  Administrator --> (Dodanie)
+  Administrator --> (Wybranie)
+  (Usuniecie) ..> (Wybranie) : <<includes>>
+  (Wyswietlenie) ..> (Wybranie) : <<extends>>
+  }
+@enduml

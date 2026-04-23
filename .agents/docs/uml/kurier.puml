@@ -1,0 +1,29 @@
+@startuml
+left to right direction
+skin rose
+
+actor Kurier
+
+rectangle "Courier manager" {
+  usecase (Wybranie przesyłki z listy) as (Znalezienie)
+  usecase (Filtrowanie przesyłek) as (Filtrowanie)
+  usecase (Odebranie przesyłki) as (Odebranie)
+  usecase (Dostarczenie przesyłki) as (Dostarczenie)
+  usecase (Zgubienie przesyłki) as (Zgubenie)
+  usecase (Zniszczenie przesyłki) as (Zniszczenie)
+  usecase (Dodanie komentarza/powodu) as (Komentarz)
+
+  Kurier --> (Odebranie)
+  Kurier --> (Dostarczenie)
+  Kurier --> (Zgubenie)
+  Kurier --> (Zniszczenie)
+  Kurier --> (Znalezienie)
+  (Odebranie) ..> (Znalezienie) : <<includes>>
+  (Dostarczenie) ..> (Znalezienie) : <<includes>>
+  (Zniszczenie) ..> (Znalezienie) : <<includes>>
+  (Zgubenie) ..> (Znalezienie) : <<includes>>
+  (Filtrowanie) ..> (Znalezienie) : <<extends>>
+  (Zgubenie) ..> (Komentarz) : <<includes>>
+  (Zniszczenie) ..> (Komentarz) : <<includes>>
+  }
+@enduml

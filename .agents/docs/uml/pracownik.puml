@@ -1,0 +1,29 @@
+@startuml
+left to right direction
+skin rose
+
+actor Pracownik
+
+rectangle "Courier manager" {
+  usecase (Weryfikacja przesyłki) as (Sprawdzenie)
+  usecase (Obsługa zagubionej/zniszczonej/niedostarczonej przesyłki) as (Zajecie)
+  usecase (Wybranie przesyłki z listy) as (Znalezienie)
+  usecase (Filtrowanie przesyłek) as (Filtrowanie)
+  usecase (Generowanie raportów) as (Generowanie)
+  usecase (Wyświetlenie informacji o przesyłce) as (Wyswietlenie)
+  usecase "Zamknięcie zgłoszenia (zmiana statusu)" as (Rozwiazanie)
+  usecase (Dodanie komentarza) as (Dodanie)
+
+  Pracownik --> (Sprawdzenie)
+  Pracownik --> (Znalezienie)
+  Pracownik --> (Generowanie)
+  Pracownik --> (Zajecie)
+
+  (Sprawdzenie) ..> (Znalezienie) : <<includes>>
+  (Zajecie) ..> (Znalezienie) : <<includes>>
+  (Zajecie) ..> (Rozwiazanie) : <<includes>>
+  (Filtrowanie) ..> (Znalezienie) : <<extends>>
+  (Wyswietlenie) ..> (Znalezienie) : <<extends>>
+  (Dodanie) ..> (Sprawdzenie) : <<extends>>
+}
+@enduml

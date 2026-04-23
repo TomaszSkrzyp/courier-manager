@@ -1,0 +1,106 @@
+Table employes {
+  employee_id integer [PK]
+  pesel varchar(11) [not null]
+  role integer [not null]
+  first_name varchar [not null]
+  last_name varchar [not null]
+  password varchar [not null]
+  login varchar [not null]
+  address_id integer [not null]
+  created_at timestamp [not null]
+}
+ 
+Table roles {
+  role_id integer [PK]
+  name varchar [not null]
+  created_at timestamp [not null]
+}
+ 
+Table regions {
+  region_id integer [PK]
+  name varchar [not null]
+  created_at timestamp [not null]
+}
+ 
+Table regions2employes {
+  employee_id integer [not null]
+  region integer [not null]
+  created_at timestamp [not null]
+}
+ 
+Table parcels {
+  parcel_id integer [PK]
+  phoneNumber varchar [not null]
+  weight numeric [not null]
+  height numeric
+  width numeric
+  length numeric
+  fragility varchar
+  price numeric
+  expected_time timestamp [not null]
+  delivery_mode_id integer [not null]
+  destination_address integer [not null]
+  sender_address integer [not null]
+  next_region_id integer [not null]
+  status integer [not null]
+  verified boolean [not null]
+  comment varchar
+  created_at timestamp [not null]
+}
+ 
+Table addresses {
+  address_id integer [PK]
+  region_id integer [not null]
+  street varchar [not null]
+  building_number varchar [not null]
+  postal_code varchar [not null]
+  created_at timestamp [not null]
+}
+ 
+Table delivery_modes {
+  delivery_mode_id integer [PK]
+  name varchar [not null]
+  created_at timestamp [not null]
+}
+ 
+Table statuses {
+  status_id integer [PK]
+  name varchar [not null]
+  created_at timestamp [not null]
+}
+ 
+Table updates {
+  update_id integer [PK]
+  parcel_id integer [not null]
+  employee_id integer [not null]
+  region integer [not null]
+  status integer [not null]
+  time_stamp timestamp [not null]
+  comment varchar
+  created_at timestamp [not null]
+}
+
+Table price_deltas {
+  delta_id integer [PK]
+  height_delta numeric [not null]
+  length_delta numeric [not null]
+  width_delta numeric [not null]
+  weight_delta numeric [not null]
+  mode_delta numeric [not null]
+  created_at timestamp [not null]
+}
+
+Ref: employes.role > roles.role_id
+Ref: employes.employee_id < regions2employes.employee_id
+Ref: regions.region_id < regions2employes.region
+Ref: addresses.region_id > regions.region_id
+Ref: parcels.delivery_mode_id > delivery_modes.delivery_mode_id
+Ref: parcels.destination_address > addresses.address_id
+Ref: parcels.sender_address > addresses.address_id
+Ref: parcels.status > statuses.status_id
+Ref: parcels.next_region_id > regions.region_id
+Ref: updates.region > regions.region_id
+Ref: updates.employee_id > employes.employee_id
+Ref: employes.address_id > addresses.address_id
+Ref: updates.parcel_id > parcels.parcel_id
+Ref: updates.status > statuses.status_id

@@ -1,0 +1,14 @@
+@startuml
+left to right direction
+skin rose
+
+actor Klient
+
+rectangle "Courier manager" {
+  usecase (Sprawdzenie statusu przesyłki) as (Sprawdzenie)
+  usecase (Nadanie przesylki) as (Nadanie)
+
+  Klient --> (Sprawdzenie)
+  Klient --> (Nadanie)
+  }
+@enduml
