@@ -1,2 +1,0 @@
-INSERT INTO parcel (tracking_number, city, status, verified) VALUES ('123456789012345678901234', 'Katowice', 'None', false);
-INSERT INTO parcel (tracking_number, city, status, verified) VALUES ('987654321098765432109876', 'Gliwice', 'Collected', true);
