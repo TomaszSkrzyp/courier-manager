@@ -23,10 +23,7 @@
         comment: string;
     }
 
-    const deliveryModes = [
-        { id: 1, name: "Standard Courier (2-3 days)" },
-        { id: 2, name: "Express Courier (Next day)" },
-    ];
+    let deliveryModes = $state<{id: number, name: string}[]>([]);
 
     import { onMount } from 'svelte';
 
@@ -36,8 +33,11 @@
         try {
             const regRes = await fetch("http://localhost:8080/api/regions");
             if (regRes.ok) regions = await regRes.json();
+
+            const dmRes = await fetch("http://localhost:8080/api/delivery-modes");
+            if (dmRes.ok) deliveryModes = await dmRes.json();
         } catch (e) {
-            console.error("Failed to fetch regions", e);
+            console.error("Failed to fetch form data", e);
         }
     });
 
@@ -64,20 +64,30 @@
     let generatedId = $state("");
     let isSubmitting = $state(false);
 
-    function generateId(): string {
-        return Math.floor(Math.random() * 900000000 + 100000000).toString() + Math.floor(Math.random() * 900000000 + 100000000).toString().substring(0, 5);
-    }
 
     async function handleSubmit(e: SubmitEvent) {
         e.preventDefault();
         isSubmitting = true;
-        
-        // Simulate API call
-        await new Promise(r => setTimeout(r, 1000));
-        
-        generatedId = generateId();
-        submitted = true;
-        isSubmitting = false;
+
+        try {
+            const res = await fetch("http://localhost:8080/api/parcels", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(form)
+            });
+
+            if (res.ok) {
+                const created = await res.json();
+                generatedId = created.trackingNumber;
+                submitted = true;
+            } else {
+                console.error("Failed to create parcel", await res.text());
+            }
+        } catch (e) {
+            console.error("Error creating parcel", e);
+        } finally {
+            isSubmitting = false;
+        }
     }
 
     function reset() {

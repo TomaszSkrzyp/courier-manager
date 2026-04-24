@@ -14,13 +14,13 @@ public interface DeliveryUpdateRepository extends JpaRepository<DeliveryUpdate, 
 
     @Query("SELECT new pl.polsl.tab.kurier.dto.CourierStatsDTO(e.firstName, e.lastName, COUNT(DISTINCT du.parcel.parcelId)) " +
            "FROM DeliveryUpdate du JOIN du.employee e JOIN du.status s " +
-           "WHERE s.name = 'Delivered' " +
+           "WHERE s.name = 'DELIVERED' " +
            "GROUP BY e.employeeId, e.firstName, e.lastName ORDER BY COUNT(DISTINCT du.parcel.parcelId) DESC")
     List<CourierStatsDTO> countDeliveredParcelsByCourier();
 
     @Query("SELECT new pl.polsl.tab.kurier.dto.RegionStatsDTO(r.name, COUNT(DISTINCT du.parcel.parcelId)) " +
            "FROM DeliveryUpdate du JOIN du.region r JOIN du.status s " +
-           "WHERE s.name = 'Delivered' " +
+           "WHERE s.name = 'DELIVERED' " +
            "GROUP BY r.name ORDER BY COUNT(DISTINCT du.parcel.parcelId) DESC")
     List<RegionStatsDTO> countDeliveredParcelsByRegion();
 }

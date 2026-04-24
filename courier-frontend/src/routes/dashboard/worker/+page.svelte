@@ -3,7 +3,7 @@
     import { onMount } from 'svelte';
     import { slide } from 'svelte/transition';
 
-    type Status = "None" | "Created" | "Collected" | "In Transit" | "Out for Delivery" | "Delivered" | "Failed" | "Lost" | "Damaged";
+    type Status = string;
 
     interface Package {
         id: number;
@@ -14,9 +14,8 @@
         date: string;
     }
 
-    const STATUS_ORDER: Status[] = ["None", "Created", "Collected", "In Transit", "Out for Delivery", "Delivered"];
-
     let packages = $state<Package[]>([]);
+    let statuses = $state<string[]>(["None", "Created", "Collected", "In Transit", "Out for Delivery", "Delivered", "Failed", "Lost", "Damaged"]);
     let filteredPackages = $derived(packages.filter(p => {
         if (filterStatus && filterStatus !== 'All' && p.status !== filterStatus) return false;
         if (searchQuery && !p.trackingNumber.includes(searchQuery) && !p.city.toLowerCase().includes(searchQuery.toLowerCase())) return false;
@@ -32,7 +31,6 @@
             const res = await fetch("http://localhost:8080/api/parcels");
             if (res.ok) {
                 const data = await res.json();
-                // Map API data if needed
                 packages = data.map((p: any) => ({
                     id: p.parcelId || Math.random(),
                     trackingNumber: p.trackingNumber || "1234567890",
@@ -41,6 +39,12 @@
                     verified: p.verified || false,
                     date: p.date || new Date().toLocaleDateString()
                 }));
+            }
+
+            const statusRes = await fetch("http://localhost:8080/api/statuses");
+            if (statusRes.ok) {
+                const statusData = await statusRes.json();
+                statuses = statusData.map((s: any) => s.name);
             }
         } catch (err) {
             console.error("Connection error.", err);
@@ -136,12 +140,9 @@
                 <div class="input-group" style="margin: 0; flex: 1;">
                     <select bind:value={filterStatus} class="input-field">
                         <option value="All">All Statuses</option>
-                        {#each STATUS_ORDER as s}
+                        {#each statuses as s}
                             <option value={s}>{s}</option>
                         {/each}
-                        <option value="Failed">Failed</option>
-                        <option value="Lost">Lost</option>
-                        <option value="Damaged">Damaged</option>
                     </select>
                 </div>
             </div>
@@ -182,12 +183,9 @@
                                         value={pkg.status}
                                         onchange={(e) => changeStatus(pkg, e.currentTarget.value as Status)}
                                     >
-                                        {#each STATUS_ORDER as s}
+                                        {#each statuses as s}
                                             <option value={s}>{s}</option>
                                         {/each}
-                                        <option disabled>──────</option>
-                                        <option value="Lost">Mark Lost</option>
-                                        <option value="Damaged">Mark Damaged</option>
                                     </select>
                                 </td>
                             </tr>

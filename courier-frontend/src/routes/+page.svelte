@@ -31,19 +31,9 @@
                 isNumberValid = false;
             }
         } catch (err) {
-            console.error("Connection error");
-            // Mock data fallback if backend is down for UI demo
-            if (isNumberValid) {
-                foundParcel = {
-                    trackingNumber: trackingValue,
-                    city: "Warsaw",
-                    status: "In Transit",
-                    expectedDelivery: "2026-04-25"
-                };
-            } else {
-                isNumberValid = false;
-                foundParcel = null;
-            }
+            console.error("Connection error", err);
+            foundParcel = null;
+            isNumberValid = false;
         } finally {
             isLoading = false;
             showResults = true;
@@ -96,10 +86,7 @@
             </div>
         </form>
 
-        <div style="margin-top: 1rem; display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
-            <input type="checkbox" id="simValid" bind:checked={isNumberValid} />
-            <label for="simValid" style="color: var(--text-tertiary); font-size: 0.9rem;">Simulate successful API (Mock Mode)</label>
-        </div>
+
     </div>
 </div>
 
