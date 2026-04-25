@@ -22,7 +22,7 @@ public class DeliveryMode {
     private Integer deliveryModeId;
 
     @NotBlank
-    @Column(nullable = false)
+    @Column(nullable = false, unique = true)
     private String name;
 
     @CreationTimestamp

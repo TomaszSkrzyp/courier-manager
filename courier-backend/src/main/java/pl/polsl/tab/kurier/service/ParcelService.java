@@ -18,6 +18,7 @@ import pl.polsl.tab.kurier.model.DeliveryMode;
 import pl.polsl.tab.kurier.model.DeliveryUpdate;
 import pl.polsl.tab.kurier.model.Employee;
 import pl.polsl.tab.kurier.model.Parcel;
+import pl.polsl.tab.kurier.model.PriceDelta;
 import pl.polsl.tab.kurier.model.Region;
 import pl.polsl.tab.kurier.model.Status;
 import pl.polsl.tab.kurier.repository.AddressRepository;
@@ -26,6 +27,7 @@ import pl.polsl.tab.kurier.repository.DeliveryUpdateRepository;
 import pl.polsl.tab.kurier.repository.EmployeeRepository;
 import pl.polsl.tab.kurier.repository.RegionRepository;
 import pl.polsl.tab.kurier.repository.StatusRepository;
+import pl.polsl.tab.kurier.repository.PriceDeltaRepository;
 
 @Service
 public class ParcelService {
@@ -35,8 +37,14 @@ public class ParcelService {
     @Autowired private StatusRepository statusRepository;
     @Autowired private DeliveryUpdateRepository deliveryUpdateRepository;
     @Autowired private AddressRepository addressRepository;
-    @Autowired private RegionRepository regionRepository;
-    @Autowired private DeliveryModeRepository deliveryModeRepository;
+    @Autowired
+    private RegionRepository regionRepository;
+
+    @Autowired
+    private DeliveryModeRepository deliveryModeRepository;
+
+    @Autowired
+    private PriceDeltaRepository priceDeltaRepository;
     @Autowired private RouteService routeService;
 
     // -------------------------------------------------------------------------
@@ -143,8 +151,32 @@ public class ParcelService {
         if (dto.getWidth()  != null) parcel.setWidth(BigDecimal.valueOf(dto.getWidth()));
         if (dto.getLength() != null) parcel.setLength(BigDecimal.valueOf(dto.getLength()));
 
-        boolean isExpress = deliveryMode.getName().toUpperCase().contains("EXPRESS");
-        parcel.setExpectedTime(LocalDateTime.now().plusDays(isExpress ? 1 : 3));
+        parcel.setExpectedTime(LocalDateTime.now().plusDays(deliveryMode.getName().toLowerCase().contains("express") ? 1 : 3));
+
+        // Calculate price using PriceDelta
+        PriceDelta delta = priceDeltaRepository.findFirstByOrderByCreatedAtDesc()
+                .orElseGet(() -> {
+                    PriceDelta pd = new PriceDelta();
+                    pd.setWeightDelta(BigDecimal.valueOf(2.5));
+                    pd.setLengthDelta(BigDecimal.valueOf(0.1));
+                    pd.setWidthDelta(BigDecimal.valueOf(0.1));
+                    pd.setHeightDelta(BigDecimal.valueOf(0.1));
+                    pd.setModeDelta(BigDecimal.valueOf(10.0));
+                    return priceDeltaRepository.save(pd);
+                });
+
+        BigDecimal price = BigDecimal.ZERO;
+        if (dto.getWeight() != null) price = price.add(BigDecimal.valueOf(dto.getWeight()).multiply(delta.getWeightDelta()));
+        if (dto.getHeight() != null) price = price.add(BigDecimal.valueOf(dto.getHeight()).multiply(delta.getHeightDelta()));
+        if (dto.getWidth() != null) price = price.add(BigDecimal.valueOf(dto.getWidth()).multiply(delta.getWidthDelta()));
+        if (dto.getLength() != null) price = price.add(BigDecimal.valueOf(dto.getLength()).multiply(delta.getLengthDelta()));
+        
+        if (deliveryMode.getName().toLowerCase().contains("express")) {
+            price = price.add(delta.getModeDelta().multiply(BigDecimal.valueOf(1.5)));
+        } else {
+            price = price.add(delta.getModeDelta());
+        }
+        parcel.setPrice(price);
 
         return ParcelDTO.fromEntity(parcelRepository.save(parcel));
     }

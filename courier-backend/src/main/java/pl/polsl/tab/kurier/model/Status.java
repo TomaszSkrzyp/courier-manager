@@ -22,7 +22,7 @@ public class Status {
     private Integer statusId;
 
     @NotBlank
-    @Column(nullable = false)
+    @Column(nullable = false, unique = true)
     private String name;
 
     @CreationTimestamp

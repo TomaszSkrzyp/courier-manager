@@ -7,9 +7,7 @@
 	let errorMsg = $state("");
 
 	const VALID_USERS = {
-        admin: { pass: "1234", role: "admin" },
-        courier: { pass: "1234", role: "courier" },
-        office: { pass: "1234", role: "office" }
+        admin: { pass: "admin", role: "admin" }
     } as const;
 
 	function signin(e: SubmitEvent) {
@@ -77,11 +75,9 @@
 		</form>
 
 		<div class="demo-credentials">
-			<p>Demo accounts (pass: 1234):</p>
+			<p>Demo account (pass: admin):</p>
 			<div style="display: flex; gap: 0.5rem; justify-content: center; margin-top: 0.5rem;">
 				<span class="badge badge-info">admin</span>
-				<span class="badge badge-warning">office</span>
-				<span class="badge badge-success">courier</span>
 			</div>
 		</div>
 	</div>

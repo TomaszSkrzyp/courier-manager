@@ -14,6 +14,25 @@
 
     let employees = $state<Employee[]>([]);
     let regions = $state<{id: number, name: string}[]>([]);
+    let activeTab = $state("personnel"); // 'personnel' or 'pricing'
+    
+    interface PriceDelta {
+        deltaId: number;
+        weightDelta: number;
+        lengthDelta: number;
+        widthDelta: number;
+        heightDelta: number;
+        modeDelta: number;
+        createdAt: string;
+    }
+    let priceDeltas = $state<PriceDelta[]>([]);
+    let newPriceDelta = $state({
+        weightDelta: 0,
+        lengthDelta: 0,
+        widthDelta: 0,
+        heightDelta: 0,
+        modeDelta: 0
+    });
 
     onMount(async () => {
         try {
@@ -22,10 +41,46 @@
             
             const regRes = await fetch("http://localhost:8080/api/regions");
             if (regRes.ok) regions = await regRes.json();
+
+            const pdRes = await fetch("http://localhost:8080/api/price-deltas");
+            if (pdRes.ok) {
+                priceDeltas = await pdRes.json();
+                if (priceDeltas.length > 0) {
+                    const latest = priceDeltas[0];
+                    newPriceDelta = { ...latest };
+                }
+            }
         } catch (e) {
             console.error("Failed to fetch initial data", e);
         }
     });
+
+    async function handleAddPriceDelta(e: SubmitEvent) {
+        e.preventDefault();
+        isSubmitting = true;
+        try {
+            const res = await fetch("http://localhost:8080/api/price-deltas", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(newPriceDelta)
+            });
+            if (res.ok) {
+                const added = await res.json();
+                priceDeltas = [added, ...priceDeltas];
+            }
+        } catch (e) {
+            console.error("Failed to add price delta", e);
+        } finally {
+            isSubmitting = false;
+        }
+    }
+
+    async function setAsActivePriceDelta(pd: PriceDelta) {
+        newPriceDelta = { ...pd };
+        // Simulate form submit to create a new one based on old values
+        const form = document.getElementById('price-delta-form') as HTMLFormElement;
+        if (form) form.requestSubmit();
+    }
 
     let showAddModal = $state(false);
 
@@ -158,16 +213,24 @@
     <div class="panel-header">
         <div>
             <h2>Admin Dashboard</h2>
-            <p style="color: var(--text-secondary);">Manage system personnel across all regions.</p>
+            <div style="display: flex; gap: 1rem; margin-top: 1rem;">
+                <button class="tab-btn" class:active={activeTab === 'personnel'} onclick={() => activeTab = 'personnel'}>Personnel Management</button>
+                <button class="tab-btn" class:active={activeTab === 'pricing'} onclick={() => activeTab = 'pricing'}>Pricing Rules</button>
+            </div>
         </div>
-        <button class="btn btn-primary" onclick={() => showAddModal = true}>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 0.5rem;">
-                <line x1="12" y1="5" x2="12" y2="19"></line>
-                <line x1="5" y1="12" x2="19" y2="12"></line>
-            </svg>
-            Add New Employee
-        </button>
+        {#if activeTab === 'personnel'}
+            <button class="btn btn-primary" onclick={() => showAddModal = true}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 0.5rem;">
+                    <line x1="12" y1="5" x2="12" y2="19"></line>
+                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                </svg>
+                Add New Employee
+            </button>
+        {/if}
     </div>
+
+    {#if activeTab === 'personnel'}
+        <div in:fade={{duration: 200}}>
 
     <div class="stats-grid">
         <div class="glass-panel stat-card">
@@ -258,6 +321,85 @@
             </tbody>
         </table>
     </div>
+    </div>
+    {:else}
+    <div in:fade={{duration: 200}} style="display: grid; grid-template-columns: 1fr 2fr; gap: 1.5rem;">
+        <div class="glass-panel" style="align-self: start;">
+            <h3 style="margin-bottom: 1.5rem;">Create New Pricing Rule</h3>
+            <form id="price-delta-form" onsubmit={handleAddPriceDelta} style="display: flex; flex-direction: column; gap: 1rem;">
+                <div class="input-group">
+                    <label>Base Flat Fee ($)</label>
+                    <input bind:value={newPriceDelta.modeDelta} type="number" step="0.1" class="input-field" required />
+                </div>
+                <div class="grid-2">
+                    <div class="input-group">
+                        <label>Weight Multiplier ($/kg)</label>
+                        <input bind:value={newPriceDelta.weightDelta} type="number" step="0.01" class="input-field" required />
+                    </div>
+                    <div class="input-group">
+                        <label>Length Multiplier ($/cm)</label>
+                        <input bind:value={newPriceDelta.lengthDelta} type="number" step="0.01" class="input-field" required />
+                    </div>
+                    <div class="input-group">
+                        <label>Width Multiplier ($/cm)</label>
+                        <input bind:value={newPriceDelta.widthDelta} type="number" step="0.01" class="input-field" required />
+                    </div>
+                    <div class="input-group">
+                        <label>Height Multiplier ($/cm)</label>
+                        <input bind:value={newPriceDelta.heightDelta} type="number" step="0.01" class="input-field" required />
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-primary" style="margin-top: 1rem;" disabled={isSubmitting}>
+                    {isSubmitting ? "Saving..." : "Set as Active Rule"}
+                </button>
+            </form>
+        </div>
+
+        <div class="glass-panel" style="padding: 0; overflow: hidden;">
+            <div style="padding: 1.5rem; border-bottom: 1px solid var(--border-light);">
+                <h3>Pricing History</h3>
+                <p style="color: var(--text-tertiary); font-size: 0.9rem; margin-top: 0.5rem;">The top row is the currently active rule.</p>
+            </div>
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Date Set</th>
+                        <th>Base Fee</th>
+                        <th>Weight</th>
+                        <th>L / W / H</th>
+                        <th style="text-align: right;">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {#each priceDeltas as pd, idx}
+                        <tr>
+                            <td>
+                                {new Date(pd.createdAt).toLocaleString()}
+                                {#if idx === 0}
+                                    <span class="badge badge-success" style="margin-left: 0.5rem;">ACTIVE</span>
+                                {/if}
+                            </td>
+                            <td style="font-weight: 600;">${pd.modeDelta}</td>
+                            <td>${pd.weightDelta}/kg</td>
+                            <td>${pd.lengthDelta} / ${pd.widthDelta} / ${pd.heightDelta}</td>
+                            <td style="text-align: right;">
+                                {#if idx !== 0}
+                                    <button class="btn btn-outline" style="padding: 0.4rem 0.8rem; font-size: 0.8rem;" onclick={() => setAsActivePriceDelta(pd)} disabled={isSubmitting}>
+                                        Set Active
+                                    </button>
+                                {/if}
+                            </td>
+                        </tr>
+                    {:else}
+                        <tr>
+                            <td colspan="5" style="text-align: center; padding: 2rem; color: var(--text-tertiary);">No pricing rules found.</td>
+                        </tr>
+                    {/each}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {/if}
 </div>
 
 {#if showAddModal}

@@ -22,7 +22,7 @@ public class Role {
     private Integer roleId;
 
     @NotBlank
-    @Column(nullable = false)
+    @Column(nullable = false, unique = true)
     private String name;
 
     @CreationTimestamp
