@@ -5,10 +5,16 @@ import org.springframework.stereotype.Component;
 
 import pl.polsl.tab.kurier.model.DeliveryMode;
 import pl.polsl.tab.kurier.model.PriceDelta;
+import pl.polsl.tab.kurier.model.Address;
+import pl.polsl.tab.kurier.model.Employee;
+import pl.polsl.tab.kurier.model.Region;
 import pl.polsl.tab.kurier.model.Role;
 import pl.polsl.tab.kurier.model.Status;
+import pl.polsl.tab.kurier.repository.AddressRepository;
 import pl.polsl.tab.kurier.repository.DeliveryModeRepository;
+import pl.polsl.tab.kurier.repository.EmployeeRepository;
 import pl.polsl.tab.kurier.repository.PriceDeltaRepository;
+import pl.polsl.tab.kurier.repository.RegionRepository;
 import pl.polsl.tab.kurier.repository.RoleRepository;
 import pl.polsl.tab.kurier.repository.StatusRepository;
 
@@ -22,15 +28,24 @@ public class DataSeeder implements CommandLineRunner {
     private final StatusRepository statusRepository;
     private final DeliveryModeRepository deliveryModeRepository;
     private final PriceDeltaRepository priceDeltaRepository;
+    private final EmployeeRepository employeeRepository;
+    private final AddressRepository addressRepository;
+    private final RegionRepository regionRepository;
 
     public DataSeeder(RoleRepository roleRepository,
                       StatusRepository statusRepository,
                       DeliveryModeRepository deliveryModeRepository,
-                      PriceDeltaRepository priceDeltaRepository) {
+                      PriceDeltaRepository priceDeltaRepository,
+                      EmployeeRepository employeeRepository,
+                      AddressRepository addressRepository,
+                      RegionRepository regionRepository) {
         this.roleRepository = roleRepository;
         this.statusRepository = statusRepository;
         this.deliveryModeRepository = deliveryModeRepository;
         this.priceDeltaRepository = priceDeltaRepository;
+        this.employeeRepository = employeeRepository;
+        this.addressRepository = addressRepository;
+        this.regionRepository = regionRepository;
     }
 
     @Override
@@ -39,6 +54,7 @@ public class DataSeeder implements CommandLineRunner {
         seedStatuses();
         seedDeliveryModes();
         seedPriceDelta();
+        seedAdminUser();
     }
 
     private void seedRoles() {
@@ -49,6 +65,38 @@ public class DataSeeder implements CommandLineRunner {
                 role.setName(roleName);
                 roleRepository.save(role);
             }
+        }
+    }
+
+    private void seedAdminUser() {
+        if (employeeRepository.count() == 0) {
+            Region defaultRegion = regionRepository.findByName("Warsaw")
+                    .orElseGet(() -> {
+                        Region region = new Region();
+                        region.setName("Warsaw");
+                        return regionRepository.save(region);
+                    });
+
+            Address defaultAddress = new Address();
+            defaultAddress.setStreet("Main Street");
+            defaultAddress.setBuildingNumber("1");
+            defaultAddress.setPostalCode("00-001");
+            defaultAddress.setRegion(defaultRegion);
+            defaultAddress = addressRepository.save(defaultAddress);
+
+            Role adminRole = roleRepository.findByName("ADMIN")
+                    .orElseThrow(() -> new RuntimeException("ADMIN role not found"));
+
+            Employee admin = new Employee();
+            admin.setFirstName("System");
+            admin.setLastName("Administrator");
+            admin.setLogin("admin");
+            admin.setPassword("admin");
+            admin.setPesel("00000000000");
+            admin.setRole(adminRole);
+            admin.setAddress(defaultAddress);
+            
+            employeeRepository.save(admin);
         }
     }
 

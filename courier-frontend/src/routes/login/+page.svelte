@@ -6,22 +6,35 @@
 	let pass = $state("");
 	let errorMsg = $state("");
 
-	const VALID_USERS = {
-        admin: { pass: "admin", role: "admin" }
-    } as const;
-
-	function signin(e: SubmitEvent) {
+	async function signin(e: SubmitEvent) {
 		e.preventDefault();
 		errorMsg = "";
 		
-		const account = VALID_USERS[user.toLowerCase() as keyof typeof VALID_USERS];
-		if (account && account.pass === pass) {
-            auth.login(user, account.role);
-			if (account.role === 'admin') goto("/dashboard/admin");
-			else if (account.role === 'courier') goto("/dashboard/courier");
-			else goto("/dashboard/worker");
-        } else {
-            errorMsg = "Invalid username or password";
+		try {
+            const res = await fetch("http://localhost:8080/api/employees/login", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ login: user, password: pass })
+            });
+
+            if (res.ok) {
+                const employee = await res.json();
+                
+                // Map backend roles to frontend roles
+                let frontendRole: any = employee.role.toLowerCase();
+                if (frontendRole === 'worker') frontendRole = 'office';
+                
+                auth.login(employee.login, frontendRole);
+                
+                if (frontendRole === 'admin') goto("/dashboard/admin");
+                else if (frontendRole === 'courier') goto("/dashboard/courier");
+                else goto("/dashboard/worker");
+            } else {
+                errorMsg = "Invalid username or password";
+            }
+        } catch (err) {
+            console.error("Login error:", err);
+            errorMsg = "Connection error. Please try again later.";
         }
 	}
 </script>
@@ -75,7 +88,7 @@
 		</form>
 
 		<div class="demo-credentials">
-			<p>Demo account (pass: admin):</p>
+			<p>Default account (pass: admin):</p>
 			<div style="display: flex; gap: 0.5rem; justify-content: center; margin-top: 0.5rem;">
 				<span class="badge badge-info">admin</span>
 			</div>

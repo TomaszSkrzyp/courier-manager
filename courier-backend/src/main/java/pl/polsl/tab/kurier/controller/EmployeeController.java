@@ -4,6 +4,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import pl.polsl.tab.kurier.dto.EmployeeDTO;
+import pl.polsl.tab.kurier.dto.LoginRequestDTO;
 import pl.polsl.tab.kurier.service.EmployeeService;
 
 import java.util.List;
@@ -15,6 +16,13 @@ public class EmployeeController {
 
     @Autowired
     private EmployeeService employeeService;
+
+    @PostMapping("/login")
+    public ResponseEntity<EmployeeDTO> login(@RequestBody LoginRequestDTO loginRequest) {
+        return employeeService.login(loginRequest.getLogin(), loginRequest.getPassword())
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.status(401).build());
+    }
 
     @GetMapping
     public List<EmployeeDTO> getAllEmployees() {

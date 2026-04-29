@@ -32,6 +32,12 @@ public class EmployeeService {
     @Autowired
     private RegionService regionService;
 
+    public Optional<EmployeeDTO> login(String login, String password) {
+        return employeeRepository.findByLogin(login)
+                .filter(employee -> employee.getPassword().equals(password))
+                .map(EmployeeDTO::fromEntity);
+    }
+
     public List<EmployeeDTO> getAllEmployees() {
         return employeeRepository.findAll().stream()
                 .map(EmployeeDTO::fromEntity)
