@@ -29,7 +29,10 @@ import pl.polsl.tab.kurier.repository.RegionRepository;
 import pl.polsl.tab.kurier.repository.StatusRepository;
 import pl.polsl.tab.kurier.repository.PriceDeltaRepository;
 
+import org.springframework.transaction.annotation.Transactional;
+
 @Service
+@Transactional
 public class ParcelService {
 
     @Autowired private ParcelRepository parcelRepository;

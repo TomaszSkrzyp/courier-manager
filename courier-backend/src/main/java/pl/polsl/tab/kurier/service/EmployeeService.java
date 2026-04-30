@@ -48,19 +48,9 @@ public class EmployeeService {
         Employee employee = new Employee();
         updateEmployeeFromDto(employee, dto);
         
-        // Find or create a default address if needed
-        List<Address> addresses = addressRepository.findAll();
-        if (addresses.isEmpty()) {
-            Address defaultAddress = new Address();
-            defaultAddress.setStreet("Unknown");
-            defaultAddress.setBuildingNumber("1");
-            defaultAddress.setPostalCode("00-000");
-            defaultAddress.setRegion(regionService.getOrCreateRegion("Warsaw"));
-            employee.setAddress(addressRepository.save(defaultAddress));
-        } else {
-            employee.setAddress(addresses.get(0));
-        }
-
+        // No longer forcing a default address/Warsaw region.
+        // If the UI doesn't provide an address, it remains null.
+        
         Employee saved = employeeRepository.save(employee);
         return EmployeeDTO.fromEntity(saved);
     }

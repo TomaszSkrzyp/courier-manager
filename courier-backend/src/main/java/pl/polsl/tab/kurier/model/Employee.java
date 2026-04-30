@@ -50,9 +50,8 @@ public class Employee {
     @Column(nullable = false)
     private String login;
 
-    @NotNull
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "address_id", nullable = false)
+    @JoinColumn(name = "address_id", nullable = true)
     private Address address;
 
     @CreationTimestamp

@@ -36,17 +36,19 @@ public class RouteService {
         Map<Integer, Set<Integer>> graph = new HashMap<>();
 
         List<Employee> couriers = employeeRepository.findCouriersWithRegions();
+        System.out.println("Building graph. Found couriers: " + couriers.size());
 
         for (Employee courier : couriers) {
             if (courier.getRegions() == null || courier.getRegions().size() < 2) {
-                continue; // local courier — no transit edge
+                continue;
             }
 
             List<Integer> regionIds = courier.getRegions().stream()
                     .map(r -> r.getRegionId())
                     .toList();
+            
+            System.out.println("Courier " + courier.getLogin() + " connects regions: " + regionIds);
 
-            // For a courier with regions [A, B, C], add edges A-B, A-C, B-C
             for (int i = 0; i < regionIds.size(); i++) {
                 for (int j = i + 1; j < regionIds.size(); j++) {
                     int a = regionIds.get(i);
@@ -56,7 +58,7 @@ public class RouteService {
                 }
             }
         }
-
+        System.out.println("Graph build complete. Nodes: " + graph.keySet());
         return graph;
     }
 

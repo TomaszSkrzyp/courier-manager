@@ -22,9 +22,8 @@ public class Address {
     @Column(name = "address_id")
     private Integer addressId;
 
-    @NotNull
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "region_id", nullable = false)
+    @JoinColumn(name = "region_id", nullable = true)
     private Region region;
 
     @NotBlank

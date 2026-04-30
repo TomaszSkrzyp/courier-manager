@@ -14,7 +14,7 @@ public interface EmployeeRepository extends JpaRepository<Employee, Integer> {
     Optional<Employee> findByLogin(String login);
 
     /** Fetches all couriers with their regions eagerly loaded (needed by RouteService). */
-    @Query("SELECT DISTINCT e FROM Employee e JOIN FETCH e.regions WHERE e.role.name = 'COURIER'")
+    @Query("SELECT DISTINCT e FROM Employee e JOIN FETCH e.regions WHERE UPPER(e.role.name) = 'COURIER'")
     List<Employee> findCouriersWithRegions();
 
     /** Fetches all employees with the given role name. */

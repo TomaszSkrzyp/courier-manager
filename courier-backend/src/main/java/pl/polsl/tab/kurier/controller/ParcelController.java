@@ -23,12 +23,12 @@ public class ParcelController {
     }
 
     @PostMapping
-    public ResponseEntity<ParcelDTO> createParcel(@RequestBody ParcelCreateDTO dto) {
+    public ResponseEntity<?> createParcel(@RequestBody ParcelCreateDTO dto) {
         try {
             ParcelDTO created = parcelService.createParcel(dto);
             return ResponseEntity.status(201).body(created);
         } catch (RuntimeException e) {
-            return ResponseEntity.badRequest().build();
+            return ResponseEntity.badRequest().body(e.getMessage());
         }
     }
 

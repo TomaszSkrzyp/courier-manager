@@ -6,7 +6,7 @@
         id: number;
         firstName: string;
         lastName: string;
-        role: "office" | "courier";
+        role: string;
         login: string;
         regions: string[];
         dateAdded: string;
@@ -14,8 +14,47 @@
 
     let employees = $state<Employee[]>([]);
     let regions = $state<{id: number, name: string}[]>([]);
-    let activeTab = $state("personnel"); // 'personnel' or 'pricing'
+    let activeTab = $state("personnel"); // 'personnel', 'pricing', 'regions'
     
+    let newRegionName = $state("");
+
+    async function handleAddRegion(e: SubmitEvent) {
+        e.preventDefault();
+        if (!newRegionName.trim()) return;
+        isSubmitting = true;
+        try {
+            const res = await fetch("http://localhost:8080/api/regions", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ name: newRegionName.trim() })
+            });
+            if (res.ok) {
+                const added = await res.json();
+                regions = [...regions, added];
+                newRegionName = "";
+            }
+        } catch (e) {
+            console.error("Failed to add region", e);
+        } finally {
+            isSubmitting = false;
+        }
+    }
+
+    async function deleteRegion(id: number) {
+        if(confirm("Are you sure? This may affect existing couriers and parcels.")) {
+            try {
+                const res = await fetch(`http://localhost:8080/api/regions/${id}`, {
+                    method: "DELETE"
+                });
+                if (res.ok) {
+                    regions = regions.filter(r => r.id !== id);
+                }
+            } catch (e) {
+                console.error("Failed to delete region", e);
+            }
+        }
+    }
+
     interface PriceDelta {
         deltaId: number;
         weightDelta: number;
@@ -92,7 +131,7 @@
         pesel: "",
         login: "",
         password: "",
-        role: "courier",
+        role: "COURIER",
         regions: ["", ""]
     });
 
@@ -102,7 +141,7 @@
         firstName: "",
         lastName: "",
         login: "",
-        role: "courier",
+        role: "COURIER",
         regions: ["", ""]
     });
 
@@ -218,6 +257,7 @@
             <div style="display: flex; gap: 1rem; margin-top: 1rem;">
                 <button class="tab-btn" class:active={activeTab === 'personnel'} onclick={() => activeTab = 'personnel'}>Personnel Management</button>
                 <button class="tab-btn" class:active={activeTab === 'pricing'} onclick={() => activeTab = 'pricing'}>Pricing Rules</button>
+                <button class="tab-btn" class:active={activeTab === 'regions'} onclick={() => activeTab = 'regions'}>Region Management</button>
             </div>
         </div>
         {#if activeTab === 'personnel'}
@@ -261,7 +301,7 @@
             </div>
             <div class="stat-info">
                 <h3>Active Couriers</h3>
-                <div class="stat-value">{employees.filter(e => e.role === 'courier').length}</div>
+                <div class="stat-value">{employees.filter(e => e.role === 'COURIER').length}</div>
             </div>
         </div>
 
@@ -275,7 +315,7 @@
             </div>
             <div class="stat-info">
                 <h3>Office Workers</h3>
-                <div class="stat-value">{employees.filter(e => e.role === 'office').length}</div>
+                <div class="stat-value">{employees.filter(e => e.role === 'WORKER').length}</div>
             </div>
         </div>
     </div>
@@ -297,26 +337,32 @@
                     <tr in:slide>
                         <td style="font-weight: 500;">{emp.firstName} {emp.lastName}</td>
                         <td>
-                            <span class="badge" class:badge-success={emp.role === 'courier'} class:badge-warning={emp.role === 'office'}>
-                                {emp.role === 'courier' ? 'COURIER' : 'OFFICE WORKER'}
-                            </span>
+                            {#if emp.role === 'ADMIN'}
+                                <span class="badge badge-admin">SYSTEM ADMIN</span>
+                            {:else if emp.role === 'COURIER'}
+                                <span class="badge badge-success">COURIER</span>
+                            {:else}
+                                <span class="badge badge-warning">OFFICE WORKER</span>
+                            {/if}
                         </td>
                         <td style="font-family: monospace; color: var(--text-secondary);">{emp.login}</td>
                         <td>{emp.regions.length > 0 ? emp.regions.join(" ↔ ") : "N/A"}</td>
                         <td style="color: var(--text-tertiary);">{emp.dateAdded}</td>
-                        <td style="text-align: right; display: flex; justify-content: flex-end; gap: 0.5rem;">
-                            <button class="btn btn-outline" style="padding: 0.4rem; color: var(--primary); border-color: transparent;" title="Edit" onclick={() => openEditModal(emp)}>
-                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-                                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
-                                </svg>
-                            </button>
-                            <button class="btn btn-outline" style="padding: 0.4rem; color: var(--danger); border-color: transparent;" title="Remove" onclick={() => deleteEmployee(emp.id)}>
-                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <polyline points="3 6 5 6 21 6"></polyline>
-                                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                                </svg>
-                            </button>
+                        <td style="text-align: right;">
+                            <div class="actions-cell">
+                                <button class="btn-action btn-edit" title="Edit" onclick={() => openEditModal(emp)}>
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                                    </svg>
+                                </button>
+                                <button class="btn-action btn-delete" title="Remove" onclick={() => deleteEmployee(emp.id)}>
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <polyline points="3 6 5 6 21 6"></polyline>
+                                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                                    </svg>
+                                </button>
+                            </div>
                         </td>
                     </tr>
                 {/each}
@@ -324,36 +370,88 @@
         </table>
     </div>
     </div>
+    {:else if activeTab === 'regions'}
+    <div in:fade={{duration: 200}} style="display: grid; grid-template-columns: 350px 1fr; gap: 1.5rem; align-items: start;">
+    <div class="glass-panel">
+        <h3 style="margin-bottom: 1.5rem;">Add New Region</h3>
+        <form onsubmit={handleAddRegion} style="display: flex; flex-direction: column; gap: 1rem;">
+            <div class="input-group">
+                <label>Region/City Name</label>
+                <input bind:value={newRegionName} type="text" class="input-field" placeholder="e.g. Radom" required />
+            </div>
+            <button type="submit" class="btn btn-primary" style="margin-top: 0.5rem;" disabled={isSubmitting}>
+                {isSubmitting ? "Adding..." : "Add Region"}
+            </button>
+        </form>
+    </div>
+
+    <div class="glass-panel" style="padding: 0; overflow: hidden;">
+        <div style="padding: 1.5rem; border-bottom: 1px solid var(--border-light);">
+            <h3>Current Regions</h3>
+            <p style="color: var(--text-tertiary); font-size: 0.9rem; margin-top: 0.5rem;">List of all service areas.</p>
+        </div>
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Name</th>
+                    <th style="text-align: right;">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {#each regions as region}
+                    <tr>
+                        <td style="font-family: monospace; color: var(--text-tertiary);">#{region.id}</td>
+                        <td style="font-weight: 500;">{region.name}</td>
+                        <td style="text-align: right;">
+                            <div class="actions-cell">
+                                <button class="btn-action btn-delete" onclick={() => deleteRegion(region.id)}>
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <polyline points="3 6 5 6 21 6"></polyline>
+                                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                                    </svg>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                {:else}
+                    <tr>
+                        <td colspan="3" style="text-align: center; padding: 2rem; color: var(--text-tertiary);">No regions defined.</td>
+                    </tr>
+                {/each}
+            </tbody>
+        </table>
+    </div>
+    </div>
     {:else}
-    <div in:fade={{duration: 200}} style="display: grid; grid-template-columns: 1fr 2fr; gap: 1.5rem;">
-        <div class="glass-panel" style="align-self: start;">
+    <div in:fade={{duration: 200}} class="pricing-grid">        <div class="glass-panel" style="align-self: start;">
             <h3 style="margin-bottom: 1.5rem;">Create New Pricing Rule</h3>
             <form id="price-delta-form" onsubmit={handleAddPriceDelta} style="display: flex; flex-direction: column; gap: 1rem;">
                 <div class="grid-2">
                     <div class="input-group">
-                        <label>Normal Mode Base ($)</label>
+                        <label>Normal Mode ($)</label>
                         <input bind:value={newPriceDelta.normalModeDelta} type="number" step="0.1" class="input-field" required />
                     </div>
                     <div class="input-group">
-                        <label>Express Mode Base ($)</label>
+                        <label>Express Mode ($)</label>
                         <input bind:value={newPriceDelta.expressModeDelta} type="number" step="0.1" class="input-field" required />
                     </div>
                 </div>
                 <div class="grid-2">
                     <div class="input-group">
-                        <label>Weight Multiplier ($/kg)</label>
+                        <label>Weight ($/kg)</label>
                         <input bind:value={newPriceDelta.weightDelta} type="number" step="0.01" class="input-field" required />
                     </div>
                     <div class="input-group">
-                        <label>Length Multiplier ($/cm)</label>
+                        <label>Length ($/cm)</label>
                         <input bind:value={newPriceDelta.lengthDelta} type="number" step="0.01" class="input-field" required />
                     </div>
                     <div class="input-group">
-                        <label>Width Multiplier ($/cm)</label>
+                        <label>Width ($/cm)</label>
                         <input bind:value={newPriceDelta.widthDelta} type="number" step="0.01" class="input-field" required />
                     </div>
                     <div class="input-group">
-                        <label>Height Multiplier ($/cm)</label>
+                        <label>Height ($/cm)</label>
                         <input bind:value={newPriceDelta.heightDelta} type="number" step="0.01" class="input-field" required />
                     </div>
                 </div>
@@ -366,45 +464,41 @@
         <div class="glass-panel" style="padding: 0; overflow: hidden;">
             <div style="padding: 1.5rem; border-bottom: 1px solid var(--border-light);">
                 <h3>Pricing History</h3>
-                <p style="color: var(--text-tertiary); font-size: 0.9rem; margin-top: 0.5rem;">The top row is the currently active rule.</p>
+                <p style="color: var(--text-tertiary); font-size: 0.9rem; margin-top: 0.5rem;">Latest active rule is shown at the top.</p>
             </div>
-            <table class="data-table">
-                <thead>
-                    <tr>
-                        <th>Date Set</th>
-                        <th>Normal / Express</th>
-                        <th>Weight</th>
-                        <th>L / W / H</th>
-                        <th style="text-align: right;">Action</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {#each priceDeltas as pd, idx}
+            <div style="overflow-x: auto;">
+                <table class="data-table">
+                    <thead>
                         <tr>
-                            <td>
-                                {new Date(pd.createdAt).toLocaleString()}
-                                {#if idx === 0}
-                                    <span class="badge badge-success" style="margin-left: 0.5rem;">ACTIVE</span>
-                                {/if}
-                            </td>
-                            <td style="font-weight: 600;">${pd.normalModeDelta} / ${pd.expressModeDelta}</td>
-                            <td>${pd.weightDelta}/kg</td>
-                            <td>${pd.lengthDelta} / ${pd.widthDelta} / ${pd.heightDelta}</td>
-                            <td style="text-align: right;">
-                                {#if idx !== 0}
-                                    <button class="btn btn-outline" style="padding: 0.4rem 0.8rem; font-size: 0.8rem;" onclick={() => setAsActivePriceDelta(pd)} disabled={isSubmitting}>
-                                        Set Active
-                                    </button>
-                                {/if}
-                            </td>
+                            <th>Date Set</th>
+                            <th>Base (N/E)</th>
+                            <th>Weight</th>
+                            <th>L / W / H</th>
                         </tr>
-                    {:else}
-                        <tr>
-                            <td colspan="5" style="text-align: center; padding: 2rem; color: var(--text-tertiary);">No pricing rules found.</td>
-                        </tr>
-                    {/each}
-                </tbody>
-            </table>
+                    </thead>
+                    <tbody>
+                        {#each priceDeltas as pd, idx}
+                            <tr>
+                                <td style="white-space: nowrap;">
+                                    {new Date(pd.createdAt).toLocaleDateString()}
+                                    {#if idx === 0}
+                                        <span class="badge badge-success" style="margin-left: 0.5rem;">ACTIVE</span>
+                                    {/if}
+                                </td>
+                                <td style="font-weight: 600;">${pd.normalModeDelta} / ${pd.expressModeDelta}</td>
+                                <td>${pd.weightDelta}</td>
+                                <td style="color: var(--text-secondary); font-size: 0.85rem;">
+                                    {pd.lengthDelta} / {pd.widthDelta} / {pd.heightDelta}
+                                </td>
+                            </tr>
+                        {:else}
+                            <tr>
+                                <td colspan="5" style="text-align: center; padding: 2rem; color: var(--text-tertiary);">No pricing rules found.</td>
+                            </tr>
+                        {/each}
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
     {/if}
@@ -436,30 +530,23 @@
                 </div>
 
                 <div class="input-group">
-    <label for="pesel-input">PESEL</label>
-    <input 
-        id="pesel-input"
-        value={newEmp.pesel} 
-        oninput={(e) => {
-            const target = e.currentTarget;
-            // Clean the input: digits only, max 11
-            const cleaned = target.value.replace(/\D/g, '').substring(0, 11);
-            
-            // Sync Svelte state
-            newEmp.pesel = cleaned;
-            
-            // Force DOM value to match state to keep browser validator in sync
-            target.value = cleaned;
-        }}
-        type="text" 
-        class="input-field" 
-        placeholder="Enter 11-digit PESEL"
-        required 
-        pattern="[0-9]{11}" 
-        maxlength="11"
-        title="PESEL must be exactly 11 digits"
-    />
-</div>
+                    <label for="pesel-input">PESEL</label>
+                    <input 
+                        id="pesel-input"
+                        bind:value={newEmp.pesel} 
+                        oninput={(e) => {
+                            newEmp.pesel = e.currentTarget.value.replace(/\D/g, '').substring(0, 11);
+                        }}
+                        type="text" 
+                        inputmode="numeric"
+                        class="input-field" 
+                        placeholder="Enter 11-digit PESEL"
+                        required 
+                        minlength="11"
+                        maxlength="11"
+                        title="PESEL must be exactly 11 digits"
+                    />
+                </div>
 
                 <div class="grid-2">
                     <div class="input-group">
@@ -476,12 +563,12 @@
                     <div class="input-group">
                         <label>Role</label>
                         <select bind:value={newEmp.role} class="input-field">
-                            <option value="courier">Courier</option>
-                            <option value="office">Office Worker</option>
+                            <option value="COURIER">Courier</option>
+                            <option value="WORKER">Office Worker</option>
                         </select>
                     </div>
                     
-                    {#if newEmp.role === 'courier'}
+                    {#if newEmp.role === 'COURIER'}
                         <div class="input-group" style="display: flex; gap: 0.5rem; flex-direction: column;">
                             <label>Assigned Cities</label>
                             <datalist id="regions-list">
@@ -644,55 +731,136 @@
         line-height: 1;
     }
 
+    .tab-btn {
+        padding: 0.6rem 1.2rem;
+        border: none;
+        background: transparent;
+        color: var(--text-secondary);
+        font-weight: 600;
+        cursor: pointer;
+        border-bottom: 2px solid transparent;
+        transition: all 0.2s;
+        font-size: 0.95rem;
+    }
+
+    .tab-btn:hover {
+        color: var(--primary);
+        background: rgba(79, 70, 229, 0.05);
+    }
+
+    .tab-btn.active {
+        color: var(--primary);
+        border-bottom-color: var(--primary);
+        background: rgba(79, 70, 229, 0.05);
+    }
+
+    .badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0.25rem 0.75rem;
+        border-radius: 9999px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.025em;
+        min-width: 120px;
+        height: 24px;
+    }
+
+    .badge-success {
+        background: rgba(16, 185, 129, 0.1);
+        color: var(--secondary);
+    }
+
+    .badge-warning {
+        background: rgba(245, 158, 11, 0.1);
+        color: var(--warning);
+    }
+
+    .badge-admin {
+        background: rgba(79, 70, 229, 0.1);
+        color: var(--primary);
+    }
+
     .data-table {
         width: 100%;
         border-collapse: collapse;
+        table-layout: auto;
     }
 
     .data-table th, .data-table td {
-        padding: 1rem 1.5rem;
+        padding: 1rem 1.2rem;
         text-align: left;
         border-bottom: 1px solid var(--border-color);
+        vertical-align: middle;
+    }
+
+    /* Fix actions alignment */
+    .actions-cell {
+        display: flex;
+        justify-content: flex-end;
+        gap: 0.5rem;
+        align-items: center;
+        height: 100%;
+        min-height: 40px;
     }
 
     .data-table th {
         font-weight: 600;
         color: var(--text-secondary);
         background-color: rgba(0,0,0,0.02);
-        font-size: 0.875rem;
+        font-size: 0.8rem;
         text-transform: uppercase;
         letter-spacing: 0.05em;
+        white-space: nowrap;
     }
 
     .data-table tbody tr:hover {
         background-color: rgba(79, 70, 229, 0.02);
     }
 
-    .modal-backdrop {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(0, 0, 0, 0.5);
-        backdrop-filter: blur(4px);
+    /* Pricing history specific */
+    .pricing-grid {
+        display: grid; 
+        grid-template-columns: 350px 1fr; 
+        gap: 1.5rem;
+        align-items: start;
+    }
+
+    .btn-action {
+        padding: 0.4rem;
+        border-radius: var(--radius-sm);
+        border: 1px solid transparent;
+        background: transparent;
+        cursor: pointer;
+        transition: all 0.2s;
         display: flex;
-        justify-content: center;
         align-items: center;
-        z-index: 100;
+        justify-content: center;
     }
 
-    .modal-content {
-        width: 100%;
-        max-width: 600px;
-        margin: 1rem;
-        max-height: 90vh;
-        overflow-y: auto;
+    .btn-edit {
+        color: var(--primary);
     }
 
-    .grid-2 {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 1rem;
+    .btn-edit:hover {
+        background: rgba(79, 70, 229, 0.1);
+        border-color: rgba(79, 70, 229, 0.2);
+    }
+
+    .btn-delete {
+        color: var(--danger);
+    }
+
+    .btn-delete:hover {
+        background: rgba(239, 68, 68, 0.1);
+        border-color: rgba(239, 68, 68, 0.2);
+    }
+
+    @media (max-width: 1100px) {
+        .pricing-grid {
+            grid-template-columns: 1fr;
+        }
     }
 </style>

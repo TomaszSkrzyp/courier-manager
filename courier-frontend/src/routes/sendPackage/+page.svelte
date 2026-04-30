@@ -63,11 +63,13 @@
     let submitted = $state(false);
     let generatedId = $state("");
     let isSubmitting = $state(false);
+    let errorMessage = $state("");
 
 
     async function handleSubmit(e: SubmitEvent) {
         e.preventDefault();
         isSubmitting = true;
+        errorMessage = "";
 
         try {
             const res = await fetch("http://localhost:8080/api/parcels", {
@@ -81,9 +83,12 @@
                 generatedId = created.trackingNumber;
                 submitted = true;
             } else {
-                console.error("Failed to create parcel", await res.text());
+                const text = await res.text();
+                errorMessage = text || "Failed to create parcel. Please check if regions are connected by couriers.";
+                console.error("Failed to create parcel", text);
             }
         } catch (e) {
+            errorMessage = "Connection error. Please try again later.";
             console.error("Error creating parcel", e);
         } finally {
             isSubmitting = false;
@@ -154,7 +159,20 @@
                     </div>
                     <div class="input-group">
                         <label>Postal Code</label>
-                        <input bind:value={form.senderPostalCode} type="text" placeholder="00-000" class="input-field" required pattern="\d{2}-\d{3}" />
+                        <input 
+                            bind:value={form.senderPostalCode} 
+                            oninput={(e) => {
+                                let v = e.currentTarget.value.replace(/\D/g, '');
+                                if (v.length > 2) v = v.substring(0, 2) + '-' + v.substring(2, 5);
+                                form.senderPostalCode = v;
+                            }}
+                            type="text" 
+                            placeholder="00-000" 
+                            class="input-field" 
+                            required 
+                            minlength="6"
+                            maxlength="6"
+                        />
                     </div>
                     <div class="input-group" style="grid-column: span 2;">
                         <label>Region</label>
@@ -185,7 +203,20 @@
                     </div>
                     <div class="input-group">
                         <label>Postal Code</label>
-                        <input bind:value={form.recipientPostalCode} type="text" placeholder="00-000" class="input-field" required pattern="\d{2}-\d{3}" />
+                        <input 
+                            bind:value={form.recipientPostalCode} 
+                            oninput={(e) => {
+                                let v = e.currentTarget.value.replace(/\D/g, '');
+                                if (v.length > 2) v = v.substring(0, 2) + '-' + v.substring(2, 5);
+                                form.recipientPostalCode = v;
+                            }}
+                            type="text" 
+                            placeholder="00-000" 
+                            class="input-field" 
+                            required 
+                            minlength="6"
+                            maxlength="6"
+                        />
                     </div>
                     <div class="input-group" style="grid-column: span 2;">
                         <label>Region</label>
@@ -252,7 +283,12 @@
                 </div>
             </div>
 
-            <div class="submit-section">
+            <div class="submit-section" style="flex-direction: column; align-items: flex-end; gap: 1rem;">
+                {#if errorMessage}
+                    <div class="glass-panel" style="background: rgba(239, 68, 68, 0.1); border-color: var(--danger); padding: 1rem; color: var(--danger); font-weight: 500; width: 100%;">
+                        {errorMessage}
+                    </div>
+                {/if}
                 <button type="submit" class="btn btn-primary btn-large" disabled={isSubmitting}>
                     {#if isSubmitting}
                         Processing...

@@ -24,7 +24,7 @@
                 let frontendRole: any = employee.role.toLowerCase();
                 if (frontendRole === 'worker') frontendRole = 'office';
                 
-                auth.login(employee.login, frontendRole);
+                auth.login(employee.login, frontendRole, employee.id);
                 
                 if (frontendRole === 'admin') goto("/dashboard/admin");
                 else if (frontendRole === 'courier') goto("/dashboard/courier");
