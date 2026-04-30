@@ -12,6 +12,7 @@
         status: Status;
         verified: boolean;
         date: string;
+        deliveryMode: string;
     }
 
     let packages = $state<Package[]>([]);
@@ -37,7 +38,8 @@
                     city: p.city || "Warsaw",
                     status: p.status || "Created",
                     verified: p.verified || false,
-                    date: p.date || new Date().toLocaleDateString()
+                    date: p.date || new Date().toLocaleDateString(),
+                    deliveryMode: p.deliveryMode || "NORMAL"
                 }));
             }
 
@@ -153,6 +155,7 @@
                         <tr>
                             <th>Tracking Number</th>
                             <th>City</th>
+                            <th>Mode</th>
                             <th>Status</th>
                             <th>Verified</th>
                             <th>Actions</th>
@@ -163,6 +166,11 @@
                             <tr>
                                 <td style="font-family: monospace; font-weight: 600;">{pkg.trackingNumber}</td>
                                 <td>{pkg.city}</td>
+                                <td>
+                                    <span class="badge" class:badge-primary={pkg.deliveryMode === 'EXPRESS'} class:badge-outline={pkg.deliveryMode === 'NORMAL'}>
+                                        {pkg.deliveryMode}
+                                    </span>
+                                </td>
                                 <td>
                                     <span class="badge" class:badge-success={pkg.status === 'Delivered'} class:badge-warning={pkg.status === 'In Transit' || pkg.status === 'Out for Delivery'} class:badge-danger={['Lost', 'Damaged', 'Failed'].includes(pkg.status)} class:badge-info={pkg.status === 'Created' || pkg.status === 'Collected'}>
                                         {pkg.status}

@@ -22,7 +22,8 @@
         lengthDelta: number;
         widthDelta: number;
         heightDelta: number;
-        modeDelta: number;
+        normalModeDelta: number;
+        expressModeDelta: number;
         createdAt: string;
     }
     let priceDeltas = $state<PriceDelta[]>([]);
@@ -31,7 +32,8 @@
         lengthDelta: 0,
         widthDelta: 0,
         heightDelta: 0,
-        modeDelta: 0
+        normalModeDelta: 0,
+        expressModeDelta: 0
     });
 
     onMount(async () => {
@@ -327,9 +329,15 @@
         <div class="glass-panel" style="align-self: start;">
             <h3 style="margin-bottom: 1.5rem;">Create New Pricing Rule</h3>
             <form id="price-delta-form" onsubmit={handleAddPriceDelta} style="display: flex; flex-direction: column; gap: 1rem;">
-                <div class="input-group">
-                    <label>Base Flat Fee ($)</label>
-                    <input bind:value={newPriceDelta.modeDelta} type="number" step="0.1" class="input-field" required />
+                <div class="grid-2">
+                    <div class="input-group">
+                        <label>Normal Mode Base ($)</label>
+                        <input bind:value={newPriceDelta.normalModeDelta} type="number" step="0.1" class="input-field" required />
+                    </div>
+                    <div class="input-group">
+                        <label>Express Mode Base ($)</label>
+                        <input bind:value={newPriceDelta.expressModeDelta} type="number" step="0.1" class="input-field" required />
+                    </div>
                 </div>
                 <div class="grid-2">
                     <div class="input-group">
@@ -364,7 +372,7 @@
                 <thead>
                     <tr>
                         <th>Date Set</th>
-                        <th>Base Fee</th>
+                        <th>Normal / Express</th>
                         <th>Weight</th>
                         <th>L / W / H</th>
                         <th style="text-align: right;">Action</th>
@@ -379,7 +387,7 @@
                                     <span class="badge badge-success" style="margin-left: 0.5rem;">ACTIVE</span>
                                 {/if}
                             </td>
-                            <td style="font-weight: 600;">${pd.modeDelta}</td>
+                            <td style="font-weight: 600;">${pd.normalModeDelta} / ${pd.expressModeDelta}</td>
                             <td>${pd.weightDelta}/kg</td>
                             <td>${pd.lengthDelta} / ${pd.widthDelta} / ${pd.heightDelta}</td>
                             <td style="text-align: right;">
@@ -428,9 +436,30 @@
                 </div>
 
                 <div class="input-group">
-                    <label>PESEL</label>
-                    <input bind:value={newEmp.pesel} type="text" class="input-field" pattern="\d{11}" title="11 digits required" required />
-                </div>
+    <label for="pesel-input">PESEL</label>
+    <input 
+        id="pesel-input"
+        value={newEmp.pesel} 
+        oninput={(e) => {
+            const target = e.currentTarget;
+            // Clean the input: digits only, max 11
+            const cleaned = target.value.replace(/\D/g, '').substring(0, 11);
+            
+            // Sync Svelte state
+            newEmp.pesel = cleaned;
+            
+            // Force DOM value to match state to keep browser validator in sync
+            target.value = cleaned;
+        }}
+        type="text" 
+        class="input-field" 
+        placeholder="Enter 11-digit PESEL"
+        required 
+        pattern="[0-9]{11}" 
+        maxlength="11"
+        title="PESEL must be exactly 11 digits"
+    />
+</div>
 
                 <div class="grid-2">
                     <div class="input-group">

@@ -247,6 +247,17 @@ h1, h2, h3, h4, h5, h6 {
   color: var(--info);
 }
 
+.badge-primary {
+  background-color: rgba(79, 70, 229, 0.1);
+  color: var(--primary);
+}
+
+.badge-outline {
+  background-color: transparent;
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+}
+
 /* Main Layout */
 .app-container {
   display: flex;

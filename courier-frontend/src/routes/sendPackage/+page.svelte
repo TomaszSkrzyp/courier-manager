@@ -233,11 +233,14 @@
                                 <option value={m.id}>{m.name}</option>
                             {/each}
                         </select>
+                        <p style="font-size: 0.75rem; color: var(--text-tertiary); margin-top: 0.5rem;">
+                            EXPRESS: 1 day/region • NORMAL: 1.5 days/region
+                        </p>
                     </div>
                     <div class="input-group">
                         <label>Fragile Contents?</label>
                         <select bind:value={form.fragility} class="input-field">
-                            <option value="no">No — Standard Handling</option>
+                            <option value="no">No — Normal Handling</option>
                             <option value="yes">Yes — Handle with Care</option>
                         </select>
                     </div>

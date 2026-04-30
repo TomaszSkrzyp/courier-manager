@@ -12,7 +12,8 @@ public class PriceDeltaDTO {
     private BigDecimal lengthDelta;
     private BigDecimal widthDelta;
     private BigDecimal heightDelta;
-    private BigDecimal modeDelta;
+    private BigDecimal normalModeDelta;
+    private BigDecimal expressModeDelta;
     private String createdAt;
 
     public static PriceDeltaDTO fromEntity(PriceDelta entity) {
@@ -22,7 +23,8 @@ public class PriceDeltaDTO {
         dto.setLengthDelta(entity.getLengthDelta());
         dto.setWidthDelta(entity.getWidthDelta());
         dto.setHeightDelta(entity.getHeightDelta());
-        dto.setModeDelta(entity.getModeDelta());
+        dto.setNormalModeDelta(entity.getNormalModeDelta());
+        dto.setExpressModeDelta(entity.getExpressModeDelta());
         if (entity.getCreatedAt() != null) {
             dto.setCreatedAt(entity.getCreatedAt().toString());
         }

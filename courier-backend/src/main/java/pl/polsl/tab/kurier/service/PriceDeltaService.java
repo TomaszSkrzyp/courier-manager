@@ -34,7 +34,8 @@ public class PriceDeltaService {
         pd.setLengthDelta(dto.getLengthDelta());
         pd.setWidthDelta(dto.getWidthDelta());
         pd.setHeightDelta(dto.getHeightDelta());
-        pd.setModeDelta(dto.getModeDelta());
+        pd.setNormalModeDelta(dto.getNormalModeDelta());
+        pd.setExpressModeDelta(dto.getExpressModeDelta());
         
         return PriceDeltaDTO.fromEntity(priceDeltaRepository.save(pd));
     }

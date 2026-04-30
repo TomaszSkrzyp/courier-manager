@@ -10,6 +10,7 @@
         status: string;
         address: string;
         expectedDelivery: string;
+        deliveryMode: string;
     }
 
     let assignedPackages = $state<Package[]>([]);
@@ -27,7 +28,16 @@
             // Using ID 1 for demonstration
             const res = await fetch("http://localhost:8080/api/parcels/courier/1");
             if (res.ok) {
-                assignedPackages = await res.json();
+                const data = await res.json();
+                assignedPackages = data.map((p: any) => ({
+                    id: p.parcelId,
+                    trackingNumber: p.trackingNumber,
+                    city: p.city,
+                    status: p.status,
+                    address: p.address || "No address provided",
+                    expectedDelivery: p.expectedDelivery,
+                    deliveryMode: p.deliveryMode || "NORMAL"
+                }));
             }
         } catch (e) {
             console.error("Failed to fetch assigned packages", e);
@@ -123,6 +133,9 @@
                             <div>
                                 <span class="badge" class:badge-warning={pkg.status === 'Out for Delivery'} class:badge-success={pkg.status === 'Delivered'} class:badge-danger={pkg.status !== 'Out for Delivery' && pkg.status !== 'Delivered'}>
                                     {pkg.status}
+                                </span>
+                                <span class="badge" class:badge-primary={pkg.deliveryMode === 'EXPRESS'} class:badge-outline={pkg.deliveryMode === 'NORMAL'} style="margin-left: 0.5rem;">
+                                    {pkg.deliveryMode}
                                 </span>
                                 <h3 style="margin: 0.5rem 0 0.25rem 0; font-family: monospace;">{pkg.trackingNumber}</h3>
                             </div>

@@ -39,8 +39,12 @@ public class PriceDelta {
     private BigDecimal weightDelta;
 
     @NotNull
-    @Column(name = "mode_delta", nullable = false)
-    private BigDecimal modeDelta;
+    @Column(name = "normal_mode_delta", nullable = false)
+    private BigDecimal normalModeDelta;
+
+    @NotNull
+    @Column(name = "express_mode_delta", nullable = false)
+    private BigDecimal expressModeDelta;
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)

@@ -4,7 +4,6 @@ import lombok.Data;
 import pl.polsl.tab.kurier.model.Parcel;
 
 import java.math.BigDecimal;
-import java.time.format.DateTimeFormatter;
 
 @Data
 public class ParcelDTO {
@@ -13,6 +12,7 @@ public class ParcelDTO {
 
     // Destination info
     private String city;             // destination region name
+    private String address;          // full destination address
 
     // Sender info
     private String senderCity;       // sender region name
@@ -34,6 +34,7 @@ public class ParcelDTO {
     private BigDecimal width;
     private BigDecimal length;
     private String fragility;
+    private String deliveryMode;
 
     public static ParcelDTO fromEntity(Parcel parcel) {
         ParcelDTO dto = new ParcelDTO();
@@ -42,6 +43,7 @@ public class ParcelDTO {
 
         if (parcel.getDestinationAddress() != null && parcel.getDestinationAddress().getRegion() != null) {
             dto.setCity(parcel.getDestinationAddress().getRegion().getName());
+            dto.setAddress(parcel.getDestinationAddress().getStreet() + " " + parcel.getDestinationAddress().getBuildingNumber());
         }
 
         if (parcel.getSenderAddress() != null && parcel.getSenderAddress().getRegion() != null) {
@@ -62,6 +64,10 @@ public class ParcelDTO {
         dto.setWidth(parcel.getWidth());
         dto.setLength(parcel.getLength());
         dto.setFragility(parcel.getFragility());
+
+        if (parcel.getDeliveryMode() != null) {
+            dto.setDeliveryMode(parcel.getDeliveryMode().getName());
+        }
 
         if (parcel.getExpectedTime() != null) {
             dto.setExpectedDelivery(parcel.getExpectedTime().toLocalDate().toString());

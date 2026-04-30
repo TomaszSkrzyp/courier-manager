@@ -44,12 +44,12 @@
     function getStatusIndex(status: string) {
         // Map backend status to our visual timeline
         if (!status) return 0;
-        const s = status.toLowerCase();
-        if (s.includes("create") || s.includes("none")) return 0;
-        if (s.includes("collect")) return 1;
-        if (s.includes("transit") || s.includes("sort")) return 2;
-        if (s.includes("out")) return 3;
-        if (s.includes("deliver")) return 4;
+        const s = status.toUpperCase();
+        if (s.includes("CREATE") || s.includes("REGISTER") || s.includes("NONE")) return 0;
+        if (s.includes("COLLECT") || s.includes("PICKUP")) return 1;
+        if (s.includes("TRANSIT") || s.includes("HUB") || s.includes("SORT")) return 2;
+        if (s.includes("OUT")) return 3;
+        if (s.includes("DELIVER")) return 4;
         return 2; // Default fallback
     }
 </script>
@@ -110,8 +110,11 @@
                         <div style="font-size: 0.875rem; color: var(--text-tertiary); text-transform: uppercase;">Tracking Number</div>
                         <h2 style="margin: 0;">{foundParcel.trackingNumber}</h2>
                     </div>
-                    <div style="text-align: right;">
-                        <span class="badge badge-primary" style="font-size: 1rem; padding: 0.5rem 1rem; background: var(--primary); color: white;">
+                    <div style="text-align: right; display: flex; flex-direction: column; gap: 0.5rem; align-items: flex-end;">
+                        <span class="badge" class:badge-primary={foundParcel.deliveryMode === 'EXPRESS'} class:badge-outline={foundParcel.deliveryMode === 'NORMAL'}>
+                            {foundParcel.deliveryMode}
+                        </span>
+                        <span class="badge" style="font-size: 1rem; padding: 0.5rem 1rem; background: var(--secondary); color: white;">
                             {foundParcel.status || "In Transit"}
                         </span>
                     </div>

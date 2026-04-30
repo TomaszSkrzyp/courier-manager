@@ -113,4 +113,39 @@ public class RouteService {
         }
         return current; // this is the direct neighbour of start on the shortest path
     }
+
+    /**
+     * Calculates the number of hops (route length) between two regions.
+     * Returns 0 if regions are the same, or -1 if no route exists.
+     */
+    public int findRouteLength(Integer startRegionId, Integer destinationRegionId) {
+        if (startRegionId.equals(destinationRegionId)) {
+            return 0;
+        }
+
+        Map<Integer, Set<Integer>> graph = buildGraph();
+        Queue<Integer> queue = new LinkedList<>();
+        Map<Integer, Integer> distance = new HashMap<>();
+
+        queue.add(startRegionId);
+        distance.put(startRegionId, 0);
+
+        while (!queue.isEmpty()) {
+            Integer current = queue.poll();
+
+            if (current.equals(destinationRegionId)) {
+                return distance.get(current);
+            }
+
+            Set<Integer> neighbours = graph.getOrDefault(current, Collections.emptySet());
+            for (Integer neighbour : neighbours) {
+                if (!distance.containsKey(neighbour)) {
+                    distance.put(neighbour, distance.get(current) + 1);
+                    queue.add(neighbour);
+                }
+            }
+        }
+
+        return -1;
+    }
 }

@@ -151,7 +151,12 @@ public class ParcelService {
         if (dto.getWidth()  != null) parcel.setWidth(BigDecimal.valueOf(dto.getWidth()));
         if (dto.getLength() != null) parcel.setLength(BigDecimal.valueOf(dto.getLength()));
 
-        parcel.setExpectedTime(LocalDateTime.now().plusDays(deliveryMode.getName().toLowerCase().contains("express") ? 1 : 3));
+        int routeLength = routeService.findRouteLength(senderRegion.getRegionId(), recipientRegion.getRegionId());
+        if (routeLength == -1) routeLength = 1; // Fallback if graph is not fully connected yet
+
+        boolean isExpress = deliveryMode.getName().equalsIgnoreCase("EXPRESS");
+        double daysToDeliver = (routeLength + 1) * (isExpress ? 1.0 : 1.5);
+        parcel.setExpectedTime(LocalDateTime.now().plusHours((long)(daysToDeliver * 24)));
 
         // Calculate price using PriceDelta
         PriceDelta delta = priceDeltaRepository.findFirstByOrderByCreatedAtDesc()
@@ -161,7 +166,8 @@ public class ParcelService {
                     pd.setLengthDelta(BigDecimal.valueOf(0.1));
                     pd.setWidthDelta(BigDecimal.valueOf(0.1));
                     pd.setHeightDelta(BigDecimal.valueOf(0.1));
-                    pd.setModeDelta(BigDecimal.valueOf(10.0));
+                    pd.setNormalModeDelta(BigDecimal.valueOf(10.0));
+                    pd.setExpressModeDelta(BigDecimal.valueOf(25.0));
                     return priceDeltaRepository.save(pd);
                 });
 
@@ -171,10 +177,10 @@ public class ParcelService {
         if (dto.getWidth() != null) price = price.add(BigDecimal.valueOf(dto.getWidth()).multiply(delta.getWidthDelta()));
         if (dto.getLength() != null) price = price.add(BigDecimal.valueOf(dto.getLength()).multiply(delta.getLengthDelta()));
         
-        if (deliveryMode.getName().toLowerCase().contains("express")) {
-            price = price.add(delta.getModeDelta().multiply(BigDecimal.valueOf(1.5)));
+        if (isExpress) {
+            price = price.add(delta.getExpressModeDelta());
         } else {
-            price = price.add(delta.getModeDelta());
+            price = price.add(delta.getNormalModeDelta());
         }
         parcel.setPrice(price);
 

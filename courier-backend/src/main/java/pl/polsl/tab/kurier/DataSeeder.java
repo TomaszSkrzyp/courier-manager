@@ -117,7 +117,7 @@ public class DataSeeder implements CommandLineRunner {
 
     private void seedDeliveryModes() {
         if (deliveryModeRepository.count() == 0) {
-            List<String> modes = List.of("STANDARD", "EXPRESS", "ECONOMY");
+            List<String> modes = List.of("NORMAL", "EXPRESS");
             for (String modeName : modes) {
                 DeliveryMode mode = new DeliveryMode();
                 mode.setName(modeName);
@@ -133,7 +133,8 @@ public class DataSeeder implements CommandLineRunner {
             pd.setLengthDelta(BigDecimal.valueOf(0.1)); // $0.1 per cm
             pd.setWidthDelta(BigDecimal.valueOf(0.1));  // $0.1 per cm
             pd.setHeightDelta(BigDecimal.valueOf(0.1)); // $0.1 per cm
-            pd.setModeDelta(BigDecimal.valueOf(10.0));  // Base flat fee
+            pd.setNormalModeDelta(BigDecimal.valueOf(10.0));
+            pd.setExpressModeDelta(BigDecimal.valueOf(25.0));
             priceDeltaRepository.save(pd);
         }
     }
