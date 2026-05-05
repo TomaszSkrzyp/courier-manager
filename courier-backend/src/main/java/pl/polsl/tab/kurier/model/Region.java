@@ -25,6 +25,9 @@ public class Region {
     @Column(nullable = false)
     private String name;
 
+    @ManyToMany(mappedBy = "regions")
+    private java.util.Set<Employee> employeeSet;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;

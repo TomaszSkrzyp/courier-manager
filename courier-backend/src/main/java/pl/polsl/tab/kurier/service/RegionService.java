@@ -20,13 +20,33 @@ public class RegionService {
                 .map(RegionDTO::fromEntity)
                 .collect(Collectors.toList());
     }
-    
-    public Region getOrCreateRegion(String name) {
-        return regionRepository.findByName(name)
-                .orElseGet(() -> {
-                    Region newRegion = new Region();
-                    newRegion.setName(name);
-                    return regionRepository.save(newRegion);
-                });
+
+    public List<RegionDTO> getRegionsWithCouriers() {
+        return regionRepository.findRegionsWithCouriers().stream()
+                .map(RegionDTO::fromEntity)
+                .collect(Collectors.toList());
+    }
+
+    public java.util.Optional<Region> getRegionByName(String name) {
+        return regionRepository.findByName(name);
+    }
+
+    public RegionDTO createRegion(RegionDTO dto) {
+        Region region = new Region();
+        region.setName(dto.getName());
+        Region saved = regionRepository.save(region);
+        return RegionDTO.fromEntity(saved);
+    }
+
+    public RegionDTO updateRegion(Integer id, RegionDTO dto) {
+        Region region = regionRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Region not found"));
+        region.setName(dto.getName());
+        Region saved = regionRepository.save(region);
+        return RegionDTO.fromEntity(saved);
+    }
+
+    public void deleteRegion(Integer id) {
+        regionRepository.deleteById(id);
     }
 }

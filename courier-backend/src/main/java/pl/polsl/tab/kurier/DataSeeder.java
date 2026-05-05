@@ -11,6 +11,7 @@ import pl.polsl.tab.kurier.model.Status;
 import pl.polsl.tab.kurier.repository.DeliveryModeRepository;
 import pl.polsl.tab.kurier.repository.EmployeeRepository;
 import pl.polsl.tab.kurier.repository.PriceDeltaRepository;
+import pl.polsl.tab.kurier.repository.RegionRepository;
 import pl.polsl.tab.kurier.repository.RoleRepository;
 import pl.polsl.tab.kurier.repository.StatusRepository;
 
@@ -25,23 +26,27 @@ public class DataSeeder implements CommandLineRunner {
     private final DeliveryModeRepository deliveryModeRepository;
     private final PriceDeltaRepository priceDeltaRepository;
     private final EmployeeRepository employeeRepository;
+    private final RegionRepository regionRepository;
 
     public DataSeeder(RoleRepository roleRepository,
                       StatusRepository statusRepository,
                       DeliveryModeRepository deliveryModeRepository,
                       PriceDeltaRepository priceDeltaRepository,
-                      EmployeeRepository employeeRepository) {
+                      EmployeeRepository employeeRepository,
+                      RegionRepository regionRepository) {
         this.roleRepository = roleRepository;
         this.statusRepository = statusRepository;
         this.deliveryModeRepository = deliveryModeRepository;
         this.priceDeltaRepository = priceDeltaRepository;
         this.employeeRepository = employeeRepository;
+        this.regionRepository = regionRepository;
     }
 
     @Override
     public void run(String... args) throws Exception {
         seedRoles();
         seedStatuses();
+        seedRegions();
         seedDeliveryModes();
         seedPriceDelta();
         seedAdminUser();
@@ -54,6 +59,17 @@ public class DataSeeder implements CommandLineRunner {
                 Role role = new Role();
                 role.setName(roleName);
                 roleRepository.save(role);
+            }
+        }
+    }
+
+    private void seedRegions() {
+        if (regionRepository.count() == 0) {
+            List<String> regions = List.of("KATOWICE", "RADOM", "WARSZAWA");
+            for (String regionName : regions) {
+                pl.polsl.tab.kurier.model.Region region = new pl.polsl.tab.kurier.model.Region();
+                region.setName(regionName);
+                regionRepository.save(region);
             }
         }
     }

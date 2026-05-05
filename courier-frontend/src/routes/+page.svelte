@@ -111,10 +111,10 @@
                         <h2 style="margin: 0;">{foundParcel.trackingNumber}</h2>
                     </div>
                     <div style="text-align: right; display: flex; flex-direction: column; gap: 0.5rem; align-items: flex-end;">
-                        <span class="badge" class:badge-primary={foundParcel.deliveryMode === 'EXPRESS'} class:badge-outline={foundParcel.deliveryMode === 'NORMAL'}>
+                        <span class="badge" class:badge-admin={foundParcel.deliveryMode === 'EXPRESS'} class:badge-warning={foundParcel.deliveryMode === 'NORMAL'}>
                             {foundParcel.deliveryMode}
                         </span>
-                        <span class="badge" style="font-size: 1rem; padding: 0.5rem 1rem; background: var(--secondary); color: white;">
+                        <span class="badge badge-success" style="font-size: 1rem; padding: 0.5rem 1rem;">
                             {foundParcel.status || "In Transit"}
                         </span>
                     </div>
@@ -122,12 +122,47 @@
 
                 <div class="parcel-details">
                     <div class="detail-item">
-                        <span class="detail-label">Destination</span>
+                        <span class="detail-label">From</span>
+                        <span class="detail-value">{foundParcel.senderCity || "Unknown"}</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">To</span>
                         <span class="detail-value">{foundParcel.city || "Unknown"}</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Address</span>
+                        <span class="detail-value">{foundParcel.address || "N/A"}</span>
                     </div>
                     <div class="detail-item">
                         <span class="detail-label">Expected Delivery</span>
                         <span class="detail-value">{foundParcel.expectedDelivery || "Pending"}</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Weight</span>
+                        <span class="detail-value">{foundParcel.weight} kg</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Dimensions</span>
+                        <span class="detail-value">{foundParcel.length}×{foundParcel.width}×{foundParcel.height} cm</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Handling</span>
+                        <span class="detail-value">
+                            {#if foundParcel.fragility === 'FRAGILE'}
+                                <span style="color: var(--danger); display: inline-flex; align-items: center; gap: 0.25rem;">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                                    </svg>
+                                    Fragile
+                                </span>
+                            {:else}
+                                Standard
+                            {/if}
+                        </span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Service Price</span>
+                        <span class="detail-value">${foundParcel.price?.toFixed(2) || "0.00"}</span>
                     </div>
                 </div>
 
@@ -205,6 +240,40 @@
     .search-bar button {
         border-radius: var(--radius-full);
         padding: 0.75rem 2rem;
+    }
+
+    .tab-btn.active {
+        color: var(--primary);
+        border-bottom-color: var(--primary);
+        background: rgba(79, 70, 229, 0.05);
+    }
+
+    .badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0.25rem 0.75rem;
+        border-radius: 9999px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.025em;
+        min-width: 100px;
+    }
+
+    .badge-success {
+        background: rgba(16, 185, 129, 0.1);
+        color: var(--secondary);
+    }
+
+    .badge-warning {
+        background: rgba(245, 158, 11, 0.1);
+        color: var(--warning);
+    }
+
+    .badge-admin {
+        background: rgba(79, 70, 229, 0.1);
+        color: var(--primary);
     }
 
     .results-container {

@@ -35,11 +35,17 @@ public class ParcelDTO {
     private BigDecimal length;
     private String fragility;
     private String deliveryMode;
+    private BigDecimal price;
+    private String phoneNumber;
+    private String comment;
 
     public static ParcelDTO fromEntity(Parcel parcel) {
         ParcelDTO dto = new ParcelDTO();
         dto.setParcelId(parcel.getParcelId());
         dto.setTrackingNumber(parcel.getTrackingNumber());
+        dto.setPrice(parcel.getPrice());
+        dto.setPhoneNumber(parcel.getPhoneNumber());
+        dto.setComment(parcel.getComment());
 
         if (parcel.getDestinationAddress() != null && parcel.getDestinationAddress().getRegion() != null) {
             dto.setCity(parcel.getDestinationAddress().getRegion().getName());

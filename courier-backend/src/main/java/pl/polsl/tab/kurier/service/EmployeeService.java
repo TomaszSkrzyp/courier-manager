@@ -99,7 +99,9 @@ public class EmployeeService {
             Set<Region> employeeRegions = new HashSet<>();
             for (String regionName : dto.getRegions()) {
                 if (regionName != null && !regionName.trim().isEmpty()) {
-                    employeeRegions.add(regionService.getOrCreateRegion(regionName.trim()));
+                    Region region = regionService.getRegionByName(regionName.trim())
+                            .orElseThrow(() -> new RuntimeException("Region not found: " + regionName));
+                    employeeRegions.add(region);
                 }
             }
             employee.setRegions(employeeRegions);

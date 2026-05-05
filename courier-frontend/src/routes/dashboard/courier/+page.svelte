@@ -11,6 +11,13 @@
         address: string;
         expectedDelivery: string;
         deliveryMode: string;
+        // Physical info
+        senderCity: string;
+        weight: number;
+        height: number;
+        width: number;
+        length: number;
+        fragility: string;
     }
 
     let assignedPackages = $state<Package[]>([]);
@@ -36,7 +43,13 @@
                     status: p.status,
                     address: p.address || "No address provided",
                     expectedDelivery: p.expectedDelivery,
-                    deliveryMode: p.deliveryMode || "NORMAL"
+                    deliveryMode: p.deliveryMode || "NORMAL",
+                    senderCity: p.senderCity || "N/A",
+                    weight: p.weight || 0,
+                    height: p.height || 0,
+                    width: p.width || 0,
+                    length: p.length || 0,
+                    fragility: p.fragility || "no"
                 }));
             }
         } catch (e) {
@@ -153,9 +166,26 @@
                                 <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
                                 <circle cx="12" cy="10" r="3"></circle>
                             </svg>
-                            <div>
+                            <div style="flex: 1;">
                                 <div style="font-weight: 600;">{pkg.address}</div>
-                                <div style="color: var(--text-secondary); font-size: 0.875rem;">{pkg.city}</div>
+                                <div style="color: var(--text-secondary); font-size: 0.875rem;">{pkg.city} <span style="color: var(--text-tertiary); font-style: italic;">(From: {pkg.senderCity})</span></div>
+                            </div>
+                        </div>
+
+                        <div class="physical-info">
+                            <div class="phys-item">
+                                <span class="phys-label">Weight</span>
+                                <span class="phys-value">{pkg.weight} kg</span>
+                            </div>
+                            <div class="phys-item">
+                                <span class="phys-label">Size (L×W×H)</span>
+                                <span class="phys-value">{pkg.length}×{pkg.width}×{pkg.height} cm</span>
+                            </div>
+                            <div class="phys-item">
+                                <span class="phys-label">Fragile</span>
+                                <span class="phys-value" style="color: {pkg.fragility === 'yes' ? 'var(--danger)' : 'inherit'}; font-weight: {pkg.fragility === 'yes' ? '700' : 'inherit'};">
+                                    {pkg.fragility.toUpperCase()}
+                                </span>
                             </div>
                         </div>
                     </div>
@@ -295,6 +325,34 @@
         padding: 1rem;
         border-radius: var(--radius-md);
         border: 1px solid var(--border-color);
+        margin-bottom: 1rem;
+    }
+
+    .physical-info {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 1rem;
+        padding-top: 1rem;
+        border-top: 1px dashed var(--border-color);
+    }
+
+    .phys-item {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+    }
+
+    .phys-label {
+        font-size: 0.75rem;
+        color: var(--text-tertiary);
+        text-transform: uppercase;
+        letter-spacing: 0.025em;
+    }
+
+    .phys-value {
+        font-size: 0.9375rem;
+        font-weight: 600;
+        color: var(--text-primary);
     }
 
     .action-bar {

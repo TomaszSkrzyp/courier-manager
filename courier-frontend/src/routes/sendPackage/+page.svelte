@@ -31,7 +31,7 @@
 
     onMount(async () => {
         try {
-            const regRes = await fetch("http://localhost:8080/api/regions");
+            const regRes = await fetch("http://localhost:8080/api/regions/active");
             if (regRes.ok) regions = await regRes.json();
 
             const dmRes = await fetch("http://localhost:8080/api/delivery-modes");

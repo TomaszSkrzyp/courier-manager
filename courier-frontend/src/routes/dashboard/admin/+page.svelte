@@ -17,6 +17,11 @@
     let activeTab = $state("personnel"); // 'personnel', 'pricing', 'regions'
     
     let newRegionName = $state("");
+    let showAddRegionModal = $state(false);
+    let showAddPriceModal = $state(false);
+    let showEditRegionModal = $state(false);
+    let editingRegionId = $state<number | null>(null);
+    let editRegionName = $state("");
 
     async function handleAddRegion(e: SubmitEvent) {
         e.preventDefault();
@@ -32,6 +37,7 @@
                 const added = await res.json();
                 regions = [...regions, added];
                 newRegionName = "";
+                showAddRegionModal = false;
             }
         } catch (e) {
             console.error("Failed to add region", e);
@@ -40,20 +46,76 @@
         }
     }
 
-    async function deleteRegion(id: number) {
-        if(confirm("Are you sure? This may affect existing couriers and parcels.")) {
+    async function handleDeleteRegion(id: number) {
+        if(confirm("Are you sure you want to remove this region? This may affect assigned couriers.")) {
             try {
                 const res = await fetch(`http://localhost:8080/api/regions/${id}`, {
                     method: "DELETE"
                 });
                 if (res.ok) {
                     regions = regions.filter(r => r.id !== id);
+                    const empRes = await fetch("http://localhost:8080/api/employees");
+                    if (empRes.ok) employees = await empRes.json();
                 }
             } catch (e) {
                 console.error("Failed to delete region", e);
             }
         }
     }
+
+    function openEditRegionModal(region: {id: number, name: string}) {
+        editingRegionId = region.id;
+        editRegionName = region.name;
+        showEditRegionModal = true;
+    }
+
+    async function handleUpdateRegion(e: SubmitEvent) {
+        e.preventDefault();
+        if (!editRegionName.trim()) return;
+        isSubmitting = true;
+        try {
+            const res = await fetch(`http://localhost:8080/api/regions/${editingRegionId}`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ name: editRegionName.trim() })
+            });
+            if (res.ok) {
+                const updated = await res.json();
+                regions = regions.map(r => r.id === editingRegionId ? updated : r);
+                showEditRegionModal = false;
+                editingRegionId = null;
+                editRegionName = "";
+
+                const empRes = await fetch("http://localhost:8080/api/employees");
+                if (empRes.ok) employees = await empRes.json();
+            }
+        } catch (e) {
+            console.error("Failed to update region", e);
+        } finally {
+            isSubmitting = false;
+        }
+    }
+
+    let showAddModal = $state(false);
+    let newEmp = $state({
+        firstName: "",
+        lastName: "",
+        pesel: "",
+        login: "",
+        password: "",
+        role: "COURIER",
+        regions: ["", ""]
+    });
+
+    let showEditModal = $state(false);
+    let editingId = $state<number | null>(null);
+    let editEmp = $state({
+        firstName: "",
+        lastName: "",
+        login: "",
+        role: "COURIER",
+        regions: ["", ""]
+    });
 
     interface PriceDelta {
         deltaId: number;
@@ -74,6 +136,8 @@
         normalModeDelta: 0,
         expressModeDelta: 0
     });
+
+    let isSubmitting = $state(false);
 
     onMount(async () => {
         try {
@@ -108,6 +172,7 @@
             if (res.ok) {
                 const added = await res.json();
                 priceDeltas = [added, ...priceDeltas];
+                showAddPriceModal = false;
             }
         } catch (e) {
             console.error("Failed to add price delta", e);
@@ -115,37 +180,6 @@
             isSubmitting = false;
         }
     }
-
-    async function setAsActivePriceDelta(pd: PriceDelta) {
-        newPriceDelta = { ...pd };
-        // Simulate form submit to create a new one based on old values
-        const form = document.getElementById('price-delta-form') as HTMLFormElement;
-        if (form) form.requestSubmit();
-    }
-
-    let showAddModal = $state(false);
-
-    let newEmp = $state({
-        firstName: "",
-        lastName: "",
-        pesel: "",
-        login: "",
-        password: "",
-        role: "COURIER",
-        regions: ["", ""]
-    });
-
-    let showEditModal = $state(false);
-    let editingId = $state<number | null>(null);
-    let editEmp = $state({
-        firstName: "",
-        lastName: "",
-        login: "",
-        role: "COURIER",
-        regions: ["", ""]
-    });
-
-    let isSubmitting = $state(false);
 
     async function handleAddEmployee(e: SubmitEvent) {
         e.preventDefault();
@@ -157,7 +191,7 @@
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     ...newEmp,
-                    regions: newEmp.role === 'courier' ? newEmp.regions.filter(r => r.trim() !== '') : []
+                    regions: newEmp.role === 'COURIER' ? newEmp.regions.filter(r => r.trim() !== '') : []
                 })
             });
 
@@ -172,11 +206,11 @@
                     pesel: "",
                     login: "",
                     password: "",
-                    role: "courier",
+                    role: "COURIER",
                     regions: ["", ""]
                 };
                 
-                // Refresh regions list in case new ones were added
+                // Refresh regions list
                 const regRes = await fetch("http://localhost:8080/api/regions");
                 if (regRes.ok) regions = await regRes.json();
             }
@@ -229,7 +263,7 @@
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     ...editEmp,
-                    regions: editEmp.role === 'courier' ? editEmp.regions.filter(r => r.trim() !== '') : []
+                    regions: editEmp.role === 'COURIER' ? editEmp.regions.filter(r => r.trim() !== '') : []
                 })
             });
 
@@ -267,6 +301,22 @@
                     <line x1="5" y1="12" x2="19" y2="12"></line>
                 </svg>
                 Add New Employee
+            </button>
+        {:else if activeTab === 'regions'}
+            <button class="btn btn-primary" onclick={() => showAddRegionModal = true}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 0.5rem;">
+                    <line x1="12" y1="5" x2="12" y2="19"></line>
+                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                </svg>
+                Add New Region
+            </button>
+        {:else if activeTab === 'pricing'}
+            <button class="btn btn-primary" onclick={() => showAddPriceModal = true}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 0.5rem;">
+                    <line x1="12" y1="5" x2="12" y2="19"></line>
+                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                </svg>
+                Set New Pricing Rule
             </button>
         {/if}
     </div>
@@ -371,20 +421,7 @@
     </div>
     </div>
     {:else if activeTab === 'regions'}
-    <div in:fade={{duration: 200}} style="display: grid; grid-template-columns: 350px 1fr; gap: 1.5rem; align-items: start;">
-    <div class="glass-panel">
-        <h3 style="margin-bottom: 1.5rem;">Add New Region</h3>
-        <form onsubmit={handleAddRegion} style="display: flex; flex-direction: column; gap: 1rem;">
-            <div class="input-group">
-                <label>Region/City Name</label>
-                <input bind:value={newRegionName} type="text" class="input-field" placeholder="e.g. Radom" required />
-            </div>
-            <button type="submit" class="btn btn-primary" style="margin-top: 0.5rem;" disabled={isSubmitting}>
-                {isSubmitting ? "Adding..." : "Add Region"}
-            </button>
-        </form>
-    </div>
-
+    <div in:fade={{duration: 200}}>
     <div class="glass-panel" style="padding: 0; overflow: hidden;">
         <div style="padding: 1.5rem; border-bottom: 1px solid var(--border-light);">
             <h3>Current Regions</h3>
@@ -405,7 +442,13 @@
                         <td style="font-weight: 500;">{region.name}</td>
                         <td style="text-align: right;">
                             <div class="actions-cell">
-                                <button class="btn-action btn-delete" onclick={() => deleteRegion(region.id)}>
+                                <button class="btn-action btn-edit" title="Edit" onclick={() => openEditRegionModal(region)}>
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                                    </svg>
+                                </button>
+                                <button class="btn-action btn-delete" title="Remove" onclick={() => handleDeleteRegion(region.id)}>
                                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                         <polyline points="3 6 5 6 21 6"></polyline>
                                         <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
@@ -424,43 +467,7 @@
     </div>
     </div>
     {:else}
-    <div in:fade={{duration: 200}} class="pricing-grid">        <div class="glass-panel" style="align-self: start;">
-            <h3 style="margin-bottom: 1.5rem;">Create New Pricing Rule</h3>
-            <form id="price-delta-form" onsubmit={handleAddPriceDelta} style="display: flex; flex-direction: column; gap: 1rem;">
-                <div class="grid-2">
-                    <div class="input-group">
-                        <label>Normal Mode ($)</label>
-                        <input bind:value={newPriceDelta.normalModeDelta} type="number" step="0.1" class="input-field" required />
-                    </div>
-                    <div class="input-group">
-                        <label>Express Mode ($)</label>
-                        <input bind:value={newPriceDelta.expressModeDelta} type="number" step="0.1" class="input-field" required />
-                    </div>
-                </div>
-                <div class="grid-2">
-                    <div class="input-group">
-                        <label>Weight ($/kg)</label>
-                        <input bind:value={newPriceDelta.weightDelta} type="number" step="0.01" class="input-field" required />
-                    </div>
-                    <div class="input-group">
-                        <label>Length ($/cm)</label>
-                        <input bind:value={newPriceDelta.lengthDelta} type="number" step="0.01" class="input-field" required />
-                    </div>
-                    <div class="input-group">
-                        <label>Width ($/cm)</label>
-                        <input bind:value={newPriceDelta.widthDelta} type="number" step="0.01" class="input-field" required />
-                    </div>
-                    <div class="input-group">
-                        <label>Height ($/cm)</label>
-                        <input bind:value={newPriceDelta.heightDelta} type="number" step="0.01" class="input-field" required />
-                    </div>
-                </div>
-                <button type="submit" class="btn btn-primary" style="margin-top: 1rem;" disabled={isSubmitting}>
-                    {isSubmitting ? "Saving..." : "Set as Active Rule"}
-                </button>
-            </form>
-        </div>
-
+    <div in:fade={{duration: 200}}>
         <div class="glass-panel" style="padding: 0; overflow: hidden;">
             <div style="padding: 1.5rem; border-bottom: 1px solid var(--border-light);">
                 <h3>Pricing History</h3>
@@ -571,15 +578,20 @@
                     {#if newEmp.role === 'COURIER'}
                         <div class="input-group" style="display: flex; gap: 0.5rem; flex-direction: column;">
                             <label>Assigned Cities</label>
-                            <datalist id="regions-list">
-                                {#each regions as r}
-                                    <option value={r.name}></option>
-                                {/each}
-                            </datalist>
                             <div style="display: flex; gap: 0.5rem;">
-                                <input bind:value={newEmp.regions[0]} list="regions-list" class="input-field" placeholder="City 1" required />
+                                <select bind:value={newEmp.regions[0]} class="input-field" required>
+                                    <option value="" disabled>Select City 1</option>
+                                    {#each regions as r}
+                                        <option value={r.name}>{r.name}</option>
+                                    {/each}
+                                </select>
                                 <span style="align-self: center;">↔</span>
-                                <input bind:value={newEmp.regions[1]} list="regions-list" class="input-field" placeholder="City 2 (Optional)" />
+                                <select bind:value={newEmp.regions[1]} class="input-field">
+                                    <option value="">None (City 2)</option>
+                                    {#each regions as r}
+                                        <option value={r.name}>{r.name}</option>
+                                    {/each}
+                                </select>
                             </div>
                         </div>
                     {:else}
@@ -594,6 +606,90 @@
                     <button type="button" class="btn btn-outline" onclick={() => showAddModal = false}>Cancel</button>
                     <button type="submit" class="btn btn-primary" disabled={isSubmitting}>
                         {isSubmitting ? 'Registering...' : 'Register Employee'}
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+{/if}
+
+{#if showAddRegionModal}
+    <div class="modal-backdrop" transition:fade>
+        <div class="glass-panel modal-content" in:slide>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                <h3>Add New Region</h3>
+                <button class="btn" style="padding: 0.5rem; background: transparent;" onclick={() => showAddRegionModal = false}>
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--text-tertiary)" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
+            </div>
+
+            <form onsubmit={handleAddRegion}>
+                <div class="input-group">
+                    <label>Region/City Name</label>
+                    <input bind:value={newRegionName} type="text" class="input-field" placeholder="e.g. Radom" required />
+                </div>
+
+                <div style="margin-top: 2rem; display: flex; justify-content: flex-end; gap: 1rem;">
+                    <button type="button" class="btn btn-outline" onclick={() => showAddRegionModal = false}>Cancel</button>
+                    <button type="submit" class="btn btn-primary" disabled={isSubmitting}>
+                        {isSubmitting ? 'Adding...' : 'Add Region'}
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+{/if}
+
+{#if showAddPriceModal}
+    <div class="modal-backdrop" transition:fade>
+        <div class="glass-panel modal-content" in:slide>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                <h3>Set New Pricing Rule</h3>
+                <button class="btn" style="padding: 0.5rem; background: transparent;" onclick={() => showAddPriceModal = false}>
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--text-tertiary)" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
+            </div>
+
+            <form onsubmit={handleAddPriceDelta}>
+                <div class="grid-2">
+                    <div class="input-group">
+                        <label>Normal Mode ($)</label>
+                        <input bind:value={newPriceDelta.normalModeDelta} type="number" step="0.1" class="input-field" required />
+                    </div>
+                    <div class="input-group">
+                        <label>Express Mode ($)</label>
+                        <input bind:value={newPriceDelta.expressModeDelta} type="number" step="0.1" class="input-field" required />
+                    </div>
+                </div>
+                <div class="grid-2" style="margin-top: 1rem;">
+                    <div class="input-group">
+                        <label>Weight ($/kg)</label>
+                        <input bind:value={newPriceDelta.weightDelta} type="number" step="0.01" class="input-field" required />
+                    </div>
+                    <div class="input-group">
+                        <label>Length ($/cm)</label>
+                        <input bind:value={newPriceDelta.lengthDelta} type="number" step="0.01" class="input-field" required />
+                    </div>
+                    <div class="input-group">
+                        <label>Width ($/cm)</label>
+                        <input bind:value={newPriceDelta.widthDelta} type="number" step="0.01" class="input-field" required />
+                    </div>
+                    <div class="input-group">
+                        <label>Height ($/cm)</label>
+                        <input bind:value={newPriceDelta.heightDelta} type="number" step="0.01" class="input-field" required />
+                    </div>
+                </div>
+
+                <div style="margin-top: 2rem; display: flex; justify-content: flex-end; gap: 1rem;">
+                    <button type="button" class="btn btn-outline" onclick={() => showAddPriceModal = false}>Cancel</button>
+                    <button type="submit" class="btn btn-primary" disabled={isSubmitting}>
+                        {isSubmitting ? 'Saving...' : 'Set as Active Rule'}
                     </button>
                 </div>
             </form>
@@ -637,23 +733,28 @@
                     <div class="input-group">
                         <label>Role</label>
                         <select bind:value={editEmp.role} class="input-field">
-                            <option value="courier">Courier</option>
-                            <option value="office">Office Worker</option>
+                            <option value="COURIER">Courier</option>
+                            <option value="WORKER">Office Worker</option>
                         </select>
                     </div>
                     
-                    {#if editEmp.role === 'courier'}
+                    {#if editEmp.role === 'COURIER'}
                         <div class="input-group" style="display: flex; gap: 0.5rem; flex-direction: column;">
                             <label>Assigned Cities</label>
-                            <datalist id="regions-list-edit">
-                                {#each regions as r}
-                                    <option value={r.name}></option>
-                                {/each}
-                            </datalist>
                             <div style="display: flex; gap: 0.5rem;">
-                                <input bind:value={editEmp.regions[0]} list="regions-list-edit" class="input-field" placeholder="City 1" required />
+                                <select bind:value={editEmp.regions[0]} class="input-field" required>
+                                    <option value="" disabled>Select City 1</option>
+                                    {#each regions as r}
+                                        <option value={r.name}>{r.name}</option>
+                                    {/each}
+                                </select>
                                 <span style="align-self: center;">↔</span>
-                                <input bind:value={editEmp.regions[1]} list="regions-list-edit" class="input-field" placeholder="City 2 (Optional)" />
+                                <select bind:value={editEmp.regions[1]} class="input-field">
+                                    <option value="">None (City 2)</option>
+                                    {#each regions as r}
+                                        <option value={r.name}>{r.name}</option>
+                                    {/each}
+                                </select>
                             </div>
                         </div>
                     {:else}
@@ -666,6 +767,36 @@
 
                 <div style="margin-top: 2rem; display: flex; justify-content: flex-end; gap: 1rem;">
                     <button type="button" class="btn btn-outline" onclick={() => showEditModal = false}>Cancel</button>
+                    <button type="submit" class="btn btn-primary" disabled={isSubmitting}>
+                        {isSubmitting ? 'Saving...' : 'Save Changes'}
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+{/if}
+
+{#if showEditRegionModal}
+    <div class="modal-backdrop" transition:fade>
+        <div class="glass-panel modal-content" in:slide>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                <h3>Edit Region</h3>
+                <button class="btn" style="padding: 0.5rem; background: transparent;" onclick={() => showEditRegionModal = false}>
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--text-tertiary)" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
+            </div>
+
+            <form onsubmit={handleUpdateRegion}>
+                <div class="input-group">
+                    <label>Region/City Name</label>
+                    <input bind:value={editRegionName} type="text" class="input-field" required />
+                </div>
+
+                <div style="margin-top: 2rem; display: flex; justify-content: flex-end; gap: 1rem;">
+                    <button type="button" class="btn btn-outline" onclick={() => showEditRegionModal = false}>Cancel</button>
                     <button type="submit" class="btn btn-primary" disabled={isSubmitting}>
                         {isSubmitting ? 'Saving...' : 'Save Changes'}
                     </button>
@@ -862,5 +993,27 @@
         .pricing-grid {
             grid-template-columns: 1fr;
         }
+    }
+
+    .modal-backdrop {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.5);
+        backdrop-filter: blur(4px);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 100;
+    }
+
+    .modal-content {
+        width: 100%;
+        max-width: 500px;
+        margin: 1rem;
+        max-height: 90vh;
+        overflow-y: auto;
     }
 </style>
