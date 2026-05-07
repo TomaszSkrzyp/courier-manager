@@ -13,11 +13,13 @@
         deliveryMode: string;
         // Physical info
         senderCity: string;
+        senderAddress: string;
         weight: number;
         height: number;
         width: number;
         length: number;
         fragility: string;
+        nextRegion: string;
     }
 
     let assignedPackages = $state<Package[]>([]);
@@ -32,8 +34,8 @@
 
     onMount(async () => {
         try {
-            // Using ID 1 for demonstration
-            const res = await fetch("http://localhost:8080/api/parcels/courier/1");
+            if (!auth.userId) return;
+            const res = await fetch(`http://localhost:8080/api/parcels/courier/${auth.userId}`);
             if (res.ok) {
                 const data = await res.json();
                 assignedPackages = data.map((p: any) => ({
@@ -45,11 +47,13 @@
                     expectedDelivery: p.expectedDelivery,
                     deliveryMode: p.deliveryMode || "NORMAL",
                     senderCity: p.senderCity || "N/A",
+                    senderAddress: p.senderAddress || "N/A",
                     weight: p.weight || 0,
                     height: p.height || 0,
                     width: p.width || 0,
                     length: p.length || 0,
-                    fragility: p.fragility || "no"
+                    fragility: p.fragility || "no",
+                    nextRegion: p.nextRegion || "N/A"
                 }));
             }
         } catch (e) {
@@ -64,13 +68,43 @@
             const res = await fetch(`http://localhost:8080/api/parcels/${pkg.id}/status`, {
                 method: "PATCH",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ status: "Delivered", comment: "Successful delivery", employeeId: "1" })
+                body: JSON.stringify({ status: "DELIVERED", comment: "Successful delivery", employeeId: auth.userId?.toString() })
             });
             if (res.ok) {
-                assignedPackages = assignedPackages.map(p => p.id === pkg.id ? { ...p, status: 'Delivered' } : p);
+                assignedPackages = assignedPackages.map(p => p.id === pkg.id ? { ...p, status: 'DELIVERED' } : p);
             }
         } catch (e) {
             console.error("Failed to mark as delivered", e);
+        }
+    }
+
+    async function handlePickup(pkg: Package) {
+        try {
+            const res = await fetch(`http://localhost:8080/api/parcels/${pkg.id}/status`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ status: "IN_TRANSIT", comment: "Package picked up by courier", employeeId: auth.userId?.toString() })
+            });
+            if (res.ok) {
+                assignedPackages = assignedPackages.map(p => p.id === pkg.id ? { ...p, status: 'IN_TRANSIT' } : p);
+            }
+        } catch (e) {
+            console.error("Failed to pick up package", e);
+        }
+    }
+
+    async function handleAdvance(pkg: Package) {
+        try {
+            const res = await fetch(`http://localhost:8080/api/parcels/${pkg.id}/advance`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ employeeId: auth.userId?.toString() })
+            });
+            if (res.ok) {
+                assignedPackages = assignedPackages.filter(p => p.id !== pkg.id);
+            }
+        } catch (e) {
+            console.error("Failed to advance package", e);
         }
     }
 
@@ -93,7 +127,7 @@
                 const res = await fetch(`http://localhost:8080/api/parcels/${selectedPackage.id}/status`, {
                     method: "PATCH",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ status: selectedStatus, comment: commentText, employeeId: "1" })
+                    body: JSON.stringify({ status: selectedStatus, comment: commentText, employeeId: auth.userId?.toString() })
                 });
                 
                 if (res.ok) {
@@ -117,7 +151,7 @@
     <div class="panel-header">
         <div>
             <h2>My Deliveries</h2>
-            <p style="color: var(--text-secondary);">Welcome back, {auth.user}. You have {assignedPackages.filter(p => p.status === 'Out for Delivery').length} packages to deliver today.</p>
+            <p style="color: var(--text-secondary);">Welcome back, {auth.user}. You have {assignedPackages.filter(p => p.status === 'OUT_FOR_DELIVERY').length} packages to deliver today.</p>
         </div>
         <div class="date-badge">
             {new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })}
@@ -140,12 +174,12 @@
     {:else}
         <div class="package-list">
             {#each assignedPackages as pkg (pkg.id)}
-                <div class="glass-panel package-card" class:completed={pkg.status === 'Delivered'} class:failed={pkg.status === 'Lost' || pkg.status === 'Destroyed' || pkg.status === 'Failed'} in:slide>
+                <div class="glass-panel package-card" class:completed={pkg.status === 'DELIVERED'} class:failed={['LOST', 'DAMAGED', 'FAILED', 'UNDELIVERED'].includes(pkg.status)} in:slide>
                     <div class="pkg-info">
                         <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem;">
                             <div>
-                                <span class="badge" class:badge-warning={pkg.status === 'Out for Delivery'} class:badge-success={pkg.status === 'Delivered'} class:badge-danger={pkg.status !== 'Out for Delivery' && pkg.status !== 'Delivered'}>
-                                    {pkg.status}
+                                <span class="badge" class:badge-warning={pkg.status === 'OUT_FOR_DELIVERY'} class:badge-success={pkg.status === 'DELIVERED'} class:badge-primary={['PENDING_PICKUP', 'AT_HUB', 'IN_TRANSIT'].includes(pkg.status)} class:badge-danger={['LOST', 'DAMAGED', 'FAILED', 'UNDELIVERED'].includes(pkg.status)}>
+                                    {pkg.status.replace(/_/g, ' ')}
                                 </span>
                                 <span class="badge" class:badge-primary={pkg.deliveryMode === 'EXPRESS'} class:badge-outline={pkg.deliveryMode === 'NORMAL'} style="margin-left: 0.5rem;">
                                     {pkg.deliveryMode}
@@ -161,14 +195,43 @@
                             </div>
                         </div>
 
-                        <div class="address-box">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" style="flex-shrink: 0;">
-                                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
-                                <circle cx="12" cy="10" r="3"></circle>
-                            </svg>
-                            <div style="flex: 1;">
-                                <div style="font-weight: 600;">{pkg.address}</div>
-                                <div style="color: var(--text-secondary); font-size: 0.875rem;">{pkg.city} <span style="color: var(--text-tertiary); font-style: italic;">(From: {pkg.senderCity})</span></div>
+                        <div class="route-container" class:pickup-mode={pkg.status === 'PENDING_PICKUP'}>
+                            <div class="route-step from">
+                                <div class="route-label">FROM</div>
+                                <div class="route-content">
+                                    {#if pkg.status === 'PENDING_PICKUP' || pkg.status === 'IN_TRANSIT'}
+                                        <div class="route-main">{pkg.senderAddress}</div>
+                                        <div class="route-sub">{pkg.senderCity} <span class="loc-tag">Sender</span></div>
+                                    {:else}
+                                        <div class="route-main">{pkg.nextRegion} Hub</div>
+                                        <div class="route-sub">Current Location</div>
+                                    {/if}
+                                </div>
+                            </div>
+
+                            <div class="route-divider">
+                                <div class="route-line"></div>
+                                <div class="route-icon">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                                        <polyline points="9 18 15 12 9 6"></polyline>
+                                    </svg>
+                                </div>
+                            </div>
+
+                            <div class="route-step to">
+                                <div class="route-label">TO</div>
+                                <div class="route-content">
+                                    {#if pkg.status === 'OUT_FOR_DELIVERY'}
+                                        <div class="route-main">{pkg.address}</div>
+                                        <div class="route-sub">{pkg.city} <span class="loc-tag">Recipient</span></div>
+                                    {:else if pkg.status === 'PENDING_PICKUP'}
+                                        <div class="route-main">{pkg.senderAddress}</div>
+                                        <div class="route-sub">{pkg.senderCity} <span class="loc-tag">Pickup Point</span></div>
+                                    {:else}
+                                        <div class="route-main">{pkg.nextRegion} Hub</div>
+                                        <div class="route-sub">Target Hub</div>
+                                    {/if}
+                                </div>
                             </div>
                         </div>
 
@@ -190,14 +253,42 @@
                         </div>
                     </div>
 
-                    {#if pkg.status === 'Out for Delivery'}
+                    {#if ['OUT_FOR_DELIVERY', 'PENDING_PICKUP', 'IN_TRANSIT', 'AT_HUB'].includes(pkg.status)}
                         <div class="action-bar">
-                            <button class="btn btn-success" onclick={() => handleSuccess(pkg)}>
-                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <polyline points="20 6 9 17 4 12"></polyline>
-                                </svg>
-                                Delivered
-                            </button>
+                            {#if pkg.status === 'PENDING_PICKUP'}
+                                <button class="btn btn-primary" onclick={() => handlePickup(pkg)}>
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M21 8l-2-2H5L3 8v10a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V8z"></path>
+                                        <path d="M3 8h18"></path>
+                                        <path d="M10 12h4"></path>
+                                    </svg>
+                                    Pick Up Package
+                                </button>
+                            {:else if pkg.status === 'IN_TRANSIT'}
+                                <button class="btn btn-secondary" style="background-color: var(--primary); color: white;" onclick={() => handleAdvance(pkg)}>
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                                        <polyline points="9 22 9 12 15 12 15 22"></polyline>
+                                    </svg>
+                                    Arrived at Hub
+                                </button>
+                            {:else if pkg.status === 'OUT_FOR_DELIVERY'}
+                                <button class="btn btn-success" onclick={() => handleSuccess(pkg)}>
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <polyline points="20 6 9 17 4 12"></polyline>
+                                    </svg>
+                                    Delivered
+                                </button>
+                            {:else if pkg.status === 'AT_HUB'}
+                                <button class="btn btn-primary" onclick={() => handlePickup(pkg)}>
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M21 8l-2-2H5L3 8v10a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V8z"></path>
+                                        <path d="M3 8h18"></path>
+                                        <path d="M10 12h4"></path>
+                                    </svg>
+                                    Pick Up from Hub
+                                </button>
+                            {/if}
                             
                             <div class="dropdown">
                                 <button class="btn btn-outline issue-btn">
@@ -207,9 +298,9 @@
                                     </svg>
                                 </button>
                                 <div class="dropdown-content">
-                                    <button onclick={() => openIssueModal(pkg, 'Failed Delivery')}>Recipient absent</button>
-                                    <button onclick={() => openIssueModal(pkg, 'Damaged')}>Package damaged</button>
-                                    <button onclick={() => openIssueModal(pkg, 'Lost')}>Lost in transit</button>
+                                    <button onclick={() => openIssueModal(pkg, 'UNDELIVERED')}>Recipient absent</button>
+                                    <button onclick={() => openIssueModal(pkg, 'DAMAGED')}>Package damaged</button>
+                                    <button onclick={() => openIssueModal(pkg, 'LOST')}>Lost in transit</button>
                                 </div>
                             </div>
                         </div>
@@ -317,15 +408,89 @@
         border-radius: var(--radius-full);
     }
 
-    .address-box {
+    .route-container {
         display: flex;
         align-items: center;
         gap: 1rem;
         background: var(--bg-color);
-        padding: 1rem;
+        padding: 1.25rem;
         border-radius: var(--radius-md);
         border: 1px solid var(--border-color);
-        margin-bottom: 1rem;
+        margin-bottom: 1.5rem;
+        position: relative;
+    }
+
+    .route-container.pickup-mode {
+        border-color: var(--primary);
+        background: rgba(79, 70, 229, 0.03);
+    }
+
+    .route-step {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+    }
+
+    .route-label {
+        font-size: 0.65rem;
+        font-weight: 800;
+        letter-spacing: 0.05em;
+        color: var(--text-tertiary);
+    }
+
+    .route-step.from .route-label {
+        color: var(--primary);
+    }
+
+    .route-step.to .route-label {
+        color: var(--secondary);
+    }
+
+    .route-main {
+        font-weight: 700;
+        font-size: 1rem;
+        color: var(--text-primary);
+        line-height: 1.2;
+    }
+
+    .route-sub {
+        font-size: 0.8125rem;
+        color: var(--text-secondary);
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .loc-tag {
+        font-size: 0.7rem;
+        padding: 0.1rem 0.4rem;
+        background: rgba(0,0,0,0.05);
+        border-radius: 4px;
+        color: var(--text-tertiary);
+        font-weight: 600;
+    }
+
+    .route-divider {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+        padding: 0 0.5rem;
+    }
+
+    .route-line {
+        height: 40px;
+        width: 1px;
+        background: var(--border-color);
+        display: none; /* Only for vertical layout if needed */
+    }
+
+    .route-icon {
+        color: var(--border-color);
+        background: var(--bg-color);
+        z-index: 1;
     }
 
     .physical-info {

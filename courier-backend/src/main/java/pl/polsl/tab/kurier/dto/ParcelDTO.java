@@ -16,6 +16,7 @@ public class ParcelDTO {
 
     // Sender info
     private String senderCity;       // sender region name
+    private String senderAddress;    // full sender address
 
     // Routing
     private String nextRegion;       // current next hop region name
@@ -54,6 +55,7 @@ public class ParcelDTO {
 
         if (parcel.getSenderAddress() != null && parcel.getSenderAddress().getRegion() != null) {
             dto.setSenderCity(parcel.getSenderAddress().getRegion().getName());
+            dto.setSenderAddress(parcel.getSenderAddress().getStreet() + " " + parcel.getSenderAddress().getBuildingNumber());
         }
 
         if (parcel.getNextRegion() != null) {

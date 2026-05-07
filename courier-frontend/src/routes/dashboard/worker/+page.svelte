@@ -102,7 +102,7 @@
             const res = await fetch(`http://localhost:8080/api/parcels/${pkg.id}/status`, {
                 method: "PATCH",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ status: newStatus, comment: "Status updated by worker", employeeId: "1" })
+                body: JSON.stringify({ status: newStatus, comment: "Status updated by worker", employeeId: auth.userId?.toString() })
             });
             if (res.ok) {
                 pkg.status = newStatus;

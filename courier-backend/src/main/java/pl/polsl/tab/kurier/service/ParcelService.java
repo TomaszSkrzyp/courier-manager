@@ -219,21 +219,33 @@ public class ParcelService {
     public Optional<ParcelDTO> advanceParcel(Integer id, Integer employeeId) {
         return parcelRepository.findById(id).map(parcel -> {
             Region currentNextRegion = parcel.getNextRegion();
+            
+            if (parcel.getDestinationAddress() == null) {
+                throw new RuntimeException("Parcel destination address is null for ID: " + id);
+            }
+            
             Region destinationRegion = parcel.getDestinationAddress().getRegion();
+            if (destinationRegion == null) {
+                throw new RuntimeException("Parcel destination region is null for ID: " + id);
+            }
+
+            if (currentNextRegion == null) {
+                throw new RuntimeException("Parcel current nextRegion is null for ID: " + id);
+            }
 
             Status newStatus;
 
             if (currentNextRegion.getRegionId().equals(destinationRegion.getRegionId())) {
-                // Arrived at final destination
-                newStatus = resolveOrCreateStatus(ParcelStatus.DELIVERED);
+                // Arrived at final destination hub -> now out for delivery to the actual address
+                newStatus = resolveOrCreateStatus(ParcelStatus.OUT_FOR_DELIVERY);
                 parcel.setStatus(newStatus);
             } else {
                 // Arrived at intermediate hub — compute next hop
                 Integer newNextRegionId = routeService.findNextRegionId(
                         currentNextRegion.getRegionId(), destinationRegion.getRegionId()
                 ).orElseThrow(() -> new RuntimeException(
-                        "Route broken: no path from hub " + currentNextRegion.getRegionId()
-                        + " to destination " + destinationRegion.getRegionId()
+                        "Route broken: no path from hub " + currentNextRegion.getRegionId() + " (" + currentNextRegion.getName() + ")"
+                        + " to destination " + destinationRegion.getRegionId() + " (" + destinationRegion.getName() + ")"
                 ));
 
                 Region newNextRegion = regionRepository.findById(newNextRegionId)
