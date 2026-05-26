@@ -113,6 +113,7 @@
         firstName: "",
         lastName: "",
         login: "",
+        password: "",
         role: "COURIER",
         regions: ["", ""]
     });
@@ -726,6 +727,10 @@
                     <div class="input-group">
                         <label>System Login</label>
                         <input bind:value={editEmp.login} type="text" class="input-field" required />
+                    </div>
+                    <div class="input-group">
+                        <label>New Password (Optional)</label>
+                        <input bind:value={editEmp.password} type="password" class="input-field" placeholder="Leave blank to keep current" />
                     </div>
                 </div>
 
