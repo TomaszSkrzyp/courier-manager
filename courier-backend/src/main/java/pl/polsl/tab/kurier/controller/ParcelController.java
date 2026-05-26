@@ -1,5 +1,6 @@
 package pl.polsl.tab.kurier.controller;
 
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -23,7 +24,7 @@ public class ParcelController {
     }
 
     @PostMapping
-    public ResponseEntity<?> createParcel(@RequestBody ParcelCreateDTO dto) {
+    public ResponseEntity<?> createParcel(@Valid @RequestBody ParcelCreateDTO dto) {
         try {
             ParcelDTO created = parcelService.createParcel(dto);
             return ResponseEntity.status(201).body(created);

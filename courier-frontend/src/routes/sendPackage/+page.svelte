@@ -239,19 +239,19 @@
                 <div class="grid-4">
                     <div class="input-group">
                         <label>Weight (kg)</label>
-                        <input bind:value={form.weight} type="number" min="0.1" step="0.1" class="input-field" required />
+                        <input bind:value={form.weight} type="number" min="0.1" max="100" step="0.1" class="input-field" required />
                     </div>
                     <div class="input-group">
                         <label>Length (cm)</label>
-                        <input bind:value={form.length} type="number" min="1" class="input-field" required />
+                        <input bind:value={form.length} type="number" min="1" max="200" class="input-field" required />
                     </div>
                     <div class="input-group">
                         <label>Width (cm)</label>
-                        <input bind:value={form.width} type="number" min="1" class="input-field" required />
+                        <input bind:value={form.width} type="number" min="1" max="200" class="input-field" required />
                     </div>
                     <div class="input-group">
                         <label>Height (cm)</label>
-                        <input bind:value={form.height} type="number" min="1" class="input-field" required />
+                        <input bind:value={form.height} type="number" min="1" max="200" class="input-field" required />
                     </div>
                 </div>
 
