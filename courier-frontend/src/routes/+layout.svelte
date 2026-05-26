@@ -26,12 +26,12 @@
 <div class="app-container">
 	<nav class="navbar">
 		<a href="/" class="navbar-brand">
-			<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-				<rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
-				<line x1="8" y1="21" x2="16" y2="21"></line>
-				<line x1="12" y1="17" x2="12" y2="21"></line>
+			<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+				<path d="M21 8V21H3V8"></path>
+				<path d="M21 8H3L12 3L21 8Z"></path>
+				<path d="M10 12H14"></path>
 			</svg>
-			SwiftCourier
+			Courier Manager
 		</a>
 
 		<div class="navbar-nav">

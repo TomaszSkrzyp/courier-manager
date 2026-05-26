@@ -156,214 +156,223 @@
         </div>
     </div>
 
-    {#if activeTab === 'manage'}
-        <div in:slide>
-            <div class="glass-panel filter-bar">
-                <div class="input-group" style="margin: 0; flex: 2;">
-                    <input 
-                        type="text" 
-                        bind:value={searchQuery} 
-                        placeholder="Search by Tracking Number or City..." 
-                        class="input-field search-input"
-                    />
+    <div class="tab-content-wrapper">
+        {#if activeTab === 'manage'}
+            <div in:fade={{duration: 200}}>
+                <div class="glass-panel filter-bar">
+                    <div class="input-group" style="margin: 0; flex: 2;">
+                        <input 
+                            type="text" 
+                            bind:value={searchQuery} 
+                            placeholder="Search by Tracking Number or City..." 
+                            class="input-field search-input"
+                        />
+                    </div>
+                    
+                    <div class="input-group" style="margin: 0; flex: 1;">
+                        <select bind:value={filterStatus} class="input-field">
+                            <option value="All">All Statuses</option>
+                            {#each statuses as s}
+                                <option value={s}>{s}</option>
+                            {/each}
+                        </select>
+                    </div>
                 </div>
-                
-                <div class="input-group" style="margin: 0; flex: 1;">
-                    <select bind:value={filterStatus} class="input-field">
-                        <option value="All">All Statuses</option>
-                        {#each statuses as s}
-                            <option value={s}>{s}</option>
-                        {/each}
-                    </select>
-                </div>
-            </div>
 
-            <div class="table-container glass-panel">
-                <table class="data-table">
-                    <thead>
-                        <tr>
-                            <th style="width: 40px;"></th>
-                            <th>Tracking Number</th>
-                            <th>Destination</th>
-                            <th>Price</th>
-                            <th>Mode</th>
-                            <th>Status</th>
-                            <th>Verified</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {#each filteredPackages as pkg}
-                            <tr class:row-active={pkg.showDetails}>
-                                <td>
-                                    <button class="btn-icon" onclick={() => toggleDetails(pkg)} title="Toggle Details">
-                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="transform: rotate({pkg.showDetails ? '90deg' : '0deg'}); transition: transform 0.2s;">
-                                            <polyline points="9 18 15 12 9 6"></polyline>
-                                        </svg>
-                                    </button>
-                                </td>
-                                <td style="font-family: monospace; font-weight: 600;">{pkg.trackingNumber}</td>
-                                <td>{pkg.city}</td>
-                                <td style="font-weight: 600; color: var(--secondary);">${pkg.price.toFixed(2)}</td>
-                                <td>
-                                    <span class="badge" class:badge-primary={pkg.deliveryMode === 'EXPRESS'} class:badge-outline={pkg.deliveryMode === 'NORMAL'}>
-                                        {pkg.deliveryMode}
-                                    </span>
-                                </td>
-                                <td>
-                                    <span class="badge" class:badge-success={pkg.status === 'DELIVERED'} class:badge-warning={['IN_TRANSIT', 'OUT_FOR_DELIVERY'].includes(pkg.status)} class:badge-danger={['LOST', 'DAMAGED', 'FAILED'].includes(pkg.status)} class:badge-info={['REGISTERED', 'PENDING_PICKUP', 'AT_HUB'].includes(pkg.status)}>
-                                        {pkg.status}
-                                    </span>
-                                </td>
-                                <td>
-                                    <button 
-                                        class="toggle-btn" 
-                                        class:active={pkg.verified}
-                                        onclick={() => toggleVerified(pkg)}
-                                    >
-                                        <div class="toggle-knob"></div>
-                                    </button>
-                                </td>
-                                <td>
-                                    <select 
-                                        class="action-select" 
-                                        value={pkg.status}
-                                        onchange={(e) => changeStatus(pkg, e.currentTarget.value as Status)}
-                                    >
-                                        {#each statuses as s}
-                                            <option value={s}>{s}</option>
-                                        {/each}
-                                    </select>
-                                </td>
-                            </tr>
-                            {#if pkg.showDetails}
-                                <tr transition:slide>
-                                    <td colspan="8" style="padding: 0;">
-                                        <div class="details-panel animate-fade-in">
-                                            <div class="details-grid">
-                                                <div class="details-section">
-                                                    <h5>Sender & Destination</h5>
-                                                    <div class="detail-item">
-                                                        <span class="label">From:</span>
-                                                        <span class="value">{pkg.senderCity}</span>
-                                                    </div>
-                                                    <div class="detail-item">
-                                                        <span class="label">To:</span>
-                                                        <span class="value">{pkg.city}</span>
-                                                    </div>
-                                                    <div class="detail-item">
-                                                        <span class="label">Address:</span>
-                                                        <span class="value">{pkg.address}</span>
-                                                    </div>
-                                                    <div class="detail-item">
-                                                        <span class="label">Phone:</span>
-                                                        <span class="value">{pkg.phoneNumber}</span>
-                                                    </div>
-                                                </div>
-                                                <div class="details-section">
-                                                    <h5>Physical Attributes</h5>
-                                                    <div class="detail-item">
-                                                        <span class="label">Weight:</span>
-                                                        <span class="value">{pkg.weight} kg</span>
-                                                    </div>
-                                                    <div class="detail-item">
-                                                        <span class="label">Dimensions:</span>
-                                                        <span class="value">{pkg.length}×{pkg.width}×{pkg.height} cm</span>
-                                                    </div>
-                                                    <div class="detail-item">
-                                                        <span class="label">Fragile:</span>
-                                                        <span class="value badge" class:badge-danger={pkg.fragility === 'yes'}>{pkg.fragility.toUpperCase()}</span>
-                                                    </div>
-                                                    <div class="detail-item">
-                                                        <span class="label">Total Price:</span>
-                                                        <span class="value" style="color: var(--secondary); font-weight: 700;">${pkg.price.toFixed(2)}</span>
-                                                    </div>
-                                                </div>
-                                                <div class="details-section">
-                                                    <h5>Timing & Notes</h5>
-                                                    <div class="detail-item">
-                                                        <span class="label">Created:</span>
-                                                        <span class="value">{pkg.date}</span>
-                                                    </div>
-                                                    <div class="detail-item">
-                                                        <span class="label">Expected:</span>
-                                                        <span class="value">{pkg.expectedDelivery}</span>
-                                                    </div>
-                                                    {#if pkg.comment}
-                                                        <div class="detail-item" style="flex-direction: column; align-items: flex-start; gap: 0.25rem;">
-                                                            <span class="label">Customer Comment:</span>
-                                                            <span class="value" style="font-style: italic; font-weight: 400; line-height: 1.4; background: rgba(0,0,0,0.05); padding: 0.5rem; border-radius: 4px; width: 100%;">
-                                                                "{pkg.comment}"
-                                                            </span>
-                                                        </div>
-                                                    {/if}
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </td>
+                <div class="glass-panel" style="padding: 0; overflow: hidden;">
+                    <div class="table-responsive">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th style="width: 40px;"></th>
+                                    <th>Tracking Number</th>
+                                    <th>Destination</th>
+                                    <th>Price</th>
+                                    <th>Mode</th>
+                                    <th>Status</th>
+                                    <th>Verified</th>
+                                    <th>Actions</th>
                                 </tr>
-                            {/if}
-                        {/each}
-                        {#if filteredPackages.length === 0}
-                            <tr>
-                                <td colspan="8" style="text-align: center; padding: 2rem; color: var(--text-tertiary);">
-                                    No packages found matching your criteria.
-                                </td>
-                            </tr>
+                            </thead>
+                            <tbody>
+                                {#each filteredPackages as pkg}
+                                    <tr class:row-active={pkg.showDetails}>
+                                        <td>
+                                            <button class="btn-icon" onclick={() => toggleDetails(pkg)} title="Toggle Details">
+                                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="transform: rotate({pkg.showDetails ? '90deg' : '0deg'}); transition: transform 0.2s;">
+                                                    <polyline points="9 18 15 12 9 6"></polyline>
+                                                </svg>
+                                            </button>
+                                        </td>
+                                        <td style="font-family: monospace; font-weight: 600;">{pkg.trackingNumber}</td>
+                                        <td>{pkg.city}</td>
+                                        <td style="font-weight: 600; color: var(--secondary);">${pkg.price.toFixed(2)}</td>
+                                        <td>
+                                            <span class="badge" class:badge-primary={pkg.deliveryMode === 'EXPRESS'} class:badge-outline={pkg.deliveryMode === 'NORMAL'}>
+                                                {pkg.deliveryMode}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <span class="badge" class:badge-success={pkg.status === 'DELIVERED'} class:badge-warning={['IN_TRANSIT', 'OUT_FOR_DELIVERY'].includes(pkg.status)} class:badge-danger={['LOST', 'DAMAGED', 'FAILED'].includes(pkg.status)} class:badge-info={['REGISTERED', 'PENDING_PICKUP', 'AT_HUB'].includes(pkg.status)}>
+                                                {pkg.status}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <button 
+                                                class="toggle-btn" 
+                                                class:active={pkg.verified}
+                                                onclick={() => toggleVerified(pkg)}
+                                            >
+                                                <div class="toggle-knob"></div>
+                                            </button>
+                                        </td>
+                                        <td>
+                                            <select 
+                                                class="action-select" 
+                                                value={pkg.status}
+                                                onchange={(e) => changeStatus(pkg, e.currentTarget.value as Status)}
+                                            >
+                                                {#each statuses as s}
+                                                    <option value={s}>{s}</option>
+                                                {/each}
+                                            </select>
+                                        </td>
+                                    </tr>
+                                    {#if pkg.showDetails}
+                                        <tr transition:slide>
+                                            <td colspan="8" style="padding: 0;">
+                                                <div class="details-panel animate-fade-in">
+                                                    <div class="grid-responsive">
+                                                        <div class="details-section">
+                                                            <h5>Sender & Destination</h5>
+                                                            <div class="detail-item">
+                                                                <span class="label">From:</span>
+                                                                <span class="value">{pkg.senderCity}</span>
+                                                            </div>
+                                                            <div class="detail-item">
+                                                                <span class="label">To:</span>
+                                                                <span class="value">{pkg.city}</span>
+                                                            </div>
+                                                            <div class="detail-item">
+                                                                <span class="label">Address:</span>
+                                                                <span class="value">{pkg.address}</span>
+                                                            </div>
+                                                            <div class="detail-item">
+                                                                <span class="label">Phone:</span>
+                                                                <span class="value">{pkg.phoneNumber}</span>
+                                                            </div>
+                                                        </div>
+                                                        <div class="details-section">
+                                                            <h5>Physical Attributes</h5>
+                                                            <div class="detail-item">
+                                                                <span class="label">Weight:</span>
+                                                                <span class="value">{pkg.weight} kg</span>
+                                                            </div>
+                                                            <div class="detail-item">
+                                                                <span class="label">Dimensions:</span>
+                                                                <span class="value">{pkg.length}×{pkg.width}×{pkg.height} cm</span>
+                                                            </div>
+                                                            <div class="detail-item">
+                                                                <span class="label">Fragile:</span>
+                                                                <span class="value badge" class:badge-danger={pkg.fragility === 'yes'}>{pkg.fragility.toUpperCase()}</span>
+                                                            </div>
+                                                            <div class="detail-item">
+                                                                <span class="label">Total Price:</span>
+                                                                <span class="value" style="color: var(--secondary); font-weight: 700;">${pkg.price.toFixed(2)}</span>
+                                                            </div>
+                                                        </div>
+                                                        <div class="details-section">
+                                                            <h5>Timing & Notes</h5>
+                                                            <div class="detail-item">
+                                                                <span class="label">Created:</span>
+                                                                <span class="value">{pkg.date}</span>
+                                                            </div>
+                                                            <div class="detail-item">
+                                                                <span class="label">Expected:</span>
+                                                                <span class="value">{pkg.expectedDelivery}</span>
+                                                            </div>
+                                                            {#if pkg.comment}
+                                                                <div class="detail-item" style="flex-direction: column; align-items: flex-start; gap: 0.25rem;">
+                                                                    <span class="label">Customer Comment:</span>
+                                                                    <span class="value" style="font-style: italic; font-weight: 400; line-height: 1.4; background: rgba(0,0,0,0.05); padding: 0.5rem; border-radius: 4px; width: 100%;">
+                                                                        "{pkg.comment}"
+                                                                    </span>
+                                                                </div>
+                                                            {/if}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    {/if}
+                                {/each}
+                                {#if filteredPackages.length === 0}
+                                    <tr>
+                                        <td colspan="8" style="text-align: center; padding: 2rem; color: var(--text-tertiary);">
+                                            No packages found matching your criteria.
+                                        </td>
+                                    </tr>
+                                {/if}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        {:else if activeTab === 'reports'}
+            <div class="glass-panel" in:fade={{duration: 200}}>
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 2rem;">
+                    <div>
+                        <h3>Generate System Report</h3>
+                        <p style="color: var(--text-secondary);">Compile a comprehensive PDF report of all parcel statuses and worker performance for the selected region.</p>
+                    </div>
+                    <button class="btn btn-primary" onclick={generateReport} disabled={isGeneratingReport}>
+                        {#if isGeneratingReport}
+                            Generating...
+                        {:else}
+                            Generate Report
                         {/if}
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    {:else if activeTab === 'reports'}
-        <div class="glass-panel" in:slide>
-            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 2rem;">
-                <div>
-                    <h3>Generate System Report</h3>
-                    <p style="color: var(--text-secondary);">Compile a comprehensive PDF report of all parcel statuses and worker performance for the selected region.</p>
+                    </button>
                 </div>
-                <button class="btn btn-primary" onclick={generateReport} disabled={isGeneratingReport}>
-                    {#if isGeneratingReport}
-                        Generating...
-                    {:else}
-                        Generate Report
-                    {/if}
-                </button>
-            </div>
 
-            {#if isGeneratingReport}
-                <div class="loading-state" style="padding: 2rem 0;">
-                    <div class="spinner"></div>
-                    <p>Compiling data...</p>
-                </div>
-            {/if}
+                {#if isGeneratingReport}
+                    <div class="loading-state" style="padding: 2rem 0;">
+                        <div class="spinner"></div>
+                        <p>Compiling data...</p>
+                    </div>
+                {/if}
 
-            {#if reportReady}
-                <div class="report-result animate-fade-in">
-                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--secondary)" stroke-width="2" style="margin-bottom: 1rem;">
-                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                        <polyline points="14 2 14 8 20 8"></polyline>
-                        <line x1="16" y1="13" x2="8" y2="13"></line>
-                        <line x1="16" y1="17" x2="8" y2="17"></line>
-                        <polyline points="10 9 9 9 8 9"></polyline>
-                    </svg>
-                    <h4>Report Generated Successfully</h4>
-                    <p style="color: var(--text-secondary); margin-bottom: 1.5rem;">The Daily Operations Report (Warsaw Region) is ready for download.</p>
-                    <a href={reportUrl} download="parcels_report.pdf" class="btn btn-outline" style="text-decoration: none; display: inline-flex; align-items: center; justify-content: center;">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 0.5rem;">
-                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                            <polyline points="7 10 12 15 17 10"></polyline>
-                            <line x1="12" y1="15" x2="12" y2="3"></line>
+                {#if reportReady}
+                    <div class="report-result animate-fade-in">
+                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--secondary)" stroke-width="2" style="margin-bottom: 1rem;">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                            <polyline points="14 2 14 8 20 8"></polyline>
+                            <line x1="16" y1="13" x2="8" y2="13"></line>
+                            <line x1="16" y1="17" x2="8" y2="17"></line>
+                            <polyline points="10 9 9 9 8 9"></polyline>
                         </svg>
-                        Download PDF
-                    </a>
-                </div>
-            {/if}
-        </div>
-    {/if}
+                        <h4>Report Generated Successfully</h4>
+                        <p style="color: var(--text-secondary); margin-bottom: 1.5rem;">The Daily Operations Report (Warsaw Region) is ready for download.</p>
+                        <a href={reportUrl} download="parcels_report.pdf" class="btn btn-outline" style="text-decoration: none; display: inline-flex; align-items: center; justify-content: center;">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 0.5rem;">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                <polyline points="7 10 12 15 17 10"></polyline>
+                                <line x1="12" y1="15" x2="12" y2="3"></line>
+                            </svg>
+                            Download PDF
+                        </a>
+                    </div>
+                {/if}
+            </div>
+        {/if}
+    </div>
 </div>
 
 <style>
+    .tab-content-wrapper {
+        min-height: 400px;
+        position: relative;
+    }
+
     .dashboard-panel {
         padding: 2rem;
     }
@@ -396,7 +405,7 @@
 
     .tab-btn.active {
         background: var(--primary);
-        color: white;
+        color: var(--bg-color);
         box-shadow: var(--shadow-sm);
     }
 
@@ -444,11 +453,11 @@
     }
 
     .data-table tbody tr:hover {
-        background-color: rgba(79, 70, 229, 0.02);
+        background-color: rgba(14, 165, 233, 0.05);
     }
 
     .row-active {
-        background-color: rgba(79, 70, 229, 0.04) !important;
+        background-color: rgba(14, 165, 233, 0.08) !important;
     }
 
     .btn-icon {

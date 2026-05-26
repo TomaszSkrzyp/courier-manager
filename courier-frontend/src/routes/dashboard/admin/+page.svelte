@@ -322,194 +322,197 @@
         {/if}
     </div>
 
-    {#if activeTab === 'personnel'}
-        <div in:fade={{duration: 200}}>
+    <div class="tab-content-wrapper">
+        {#if activeTab === 'personnel'}
+            <div in:fade={{duration: 200}}>
+                <div class="stats-grid">
+                    <div class="glass-panel stat-card">
+                        <div class="stat-icon" style="background: rgba(15, 23, 42, 0.1); color: var(--primary);">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                                <circle cx="9" cy="7" r="4"></circle>
+                                <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                                <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                            </svg>
+                        </div>
+                        <div class="stat-info">
+                            <h3>Total Personnel</h3>
+                            <div class="stat-value">{employees.length}</div>
+                        </div>
+                    </div>
 
-    <div class="stats-grid">
-        <div class="glass-panel stat-card">
-            <div class="stat-icon" style="background: rgba(79, 70, 229, 0.1); color: var(--primary);">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
-                    <circle cx="9" cy="7" r="4"></circle>
-                    <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
-                    <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
-                </svg>
-            </div>
-            <div class="stat-info">
-                <h3>Total Personnel</h3>
-                <div class="stat-value">{employees.length}</div>
-            </div>
-        </div>
+                    <div class="glass-panel stat-card">
+                        <div class="stat-icon" style="background: rgba(16, 185, 129, 0.1); color: var(--secondary);">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <rect x="1" y="3" width="15" height="13"></rect>
+                                <polygon points="16 8 20 8 23 11 23 16 16 16 16 8"></polygon>
+                                <circle cx="5.5" cy="18.5" r="2.5"></circle>
+                                <circle cx="18.5" cy="18.5" r="2.5"></circle>
+                            </svg>
+                        </div>
+                        <div class="stat-info">
+                            <h3>Active Couriers</h3>
+                            <div class="stat-value">{employees.filter(e => e.role === 'COURIER').length}</div>
+                        </div>
+                    </div>
 
-        <div class="glass-panel stat-card">
-            <div class="stat-icon" style="background: rgba(16, 185, 129, 0.1); color: var(--secondary);">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <rect x="1" y="3" width="15" height="13"></rect>
-                    <polygon points="16 8 20 8 23 11 23 16 16 16 16 8"></polygon>
-                    <circle cx="5.5" cy="18.5" r="2.5"></circle>
-                    <circle cx="18.5" cy="18.5" r="2.5"></circle>
-                </svg>
-            </div>
-            <div class="stat-info">
-                <h3>Active Couriers</h3>
-                <div class="stat-value">{employees.filter(e => e.role === 'COURIER').length}</div>
-            </div>
-        </div>
+                    <div class="glass-panel stat-card">
+                        <div class="stat-icon" style="background: rgba(245, 158, 11, 0.1); color: var(--warning);">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+                                <line x1="8" y1="21" x2="16" y2="21"></line>
+                                <line x1="12" y1="17" x2="12" y2="21"></line>
+                            </svg>
+                        </div>
+                        <div class="stat-info">
+                            <h3>Office Workers</h3>
+                            <div class="stat-value">{employees.filter(e => e.role === 'WORKER').length}</div>
+                        </div>
+                    </div>
+                </div>
 
-        <div class="glass-panel stat-card">
-            <div class="stat-icon" style="background: rgba(245, 158, 11, 0.1); color: var(--warning);">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
-                    <line x1="8" y1="21" x2="16" y2="21"></line>
-                    <line x1="12" y1="17" x2="12" y2="21"></line>
-                </svg>
+                <div class="glass-panel" style="padding: 0; overflow: hidden;">
+                    <div class="table-responsive">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Role</th>
+                                    <th>Login</th>
+                                    <th>Region</th>
+                                    <th>Date Added</th>
+                                    <th style="text-align: right;">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {#each employees as emp}
+                                    <tr in:slide>
+                                        <td style="font-weight: 500;">{emp.firstName} {emp.lastName}</td>
+                                        <td>
+                                            {#if emp.role === 'ADMIN'}
+                                                <span class="badge badge-admin">SYSTEM ADMIN</span>
+                                            {:else if emp.role === 'COURIER'}
+                                                <span class="badge badge-success">COURIER</span>
+                                            {:else}
+                                                <span class="badge badge-warning">OFFICE WORKER</span>
+                                            {/if}
+                                        </td>
+                                        <td style="font-family: monospace; color: var(--text-secondary);">{emp.login}</td>
+                                        <td>{emp.regions.length > 0 ? emp.regions.join(" ↔ ") : "N/A"}</td>
+                                        <td style="color: var(--text-tertiary);">{emp.dateAdded}</td>
+                                        <td style="text-align: right;">
+                                            <div class="actions-cell">
+                                                <button class="btn-action btn-edit" title="Edit" onclick={() => openEditModal(emp)}>
+                                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                                                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                                                    </svg>
+                                                </button>
+                                                <button class="btn-action btn-delete" title="Remove" onclick={() => deleteEmployee(emp.id)}>
+                                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                        <polyline points="3 6 5 6 21 6"></polyline>
+                                                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                                                    </svg>
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                {/each}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
             </div>
-            <div class="stat-info">
-                <h3>Office Workers</h3>
-                <div class="stat-value">{employees.filter(e => e.role === 'WORKER').length}</div>
-            </div>
-        </div>
-    </div>
-
-    <div class="glass-panel" style="padding: 0; overflow: hidden;">
-        <table class="data-table">
-            <thead>
-                <tr>
-                    <th>Name</th>
-                    <th>Role</th>
-                    <th>Login</th>
-                    <th>Region</th>
-                    <th>Date Added</th>
-                    <th style="text-align: right;">Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                {#each employees as emp}
-                    <tr in:slide>
-                        <td style="font-weight: 500;">{emp.firstName} {emp.lastName}</td>
-                        <td>
-                            {#if emp.role === 'ADMIN'}
-                                <span class="badge badge-admin">SYSTEM ADMIN</span>
-                            {:else if emp.role === 'COURIER'}
-                                <span class="badge badge-success">COURIER</span>
+        {:else if activeTab === 'regions'}
+            <div in:fade={{duration: 200}}>
+                <div class="glass-panel" style="padding: 0; overflow: hidden;">
+                    <div style="padding: 1.5rem; border-bottom: 1px solid var(--border-color);">
+                        <h3>Current Regions</h3>
+                        <p style="color: var(--text-tertiary); font-size: 0.9rem; margin-top: 0.5rem;">List of all service areas.</p>
+                    </div>
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Name</th>
+                                <th style="text-align: right;">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {#each regions as region}
+                                <tr>
+                                    <td style="font-family: monospace; color: var(--text-tertiary);">#{region.id}</td>
+                                    <td style="font-weight: 500;">{region.name}</td>
+                                    <td style="text-align: right;">
+                                        <div class="actions-cell">
+                                            <button class="btn-action btn-edit" title="Edit" onclick={() => openEditRegionModal(region)}>
+                                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                                                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                                                </svg>
+                                            </button>
+                                            <button class="btn-action btn-delete" title="Remove" onclick={() => handleDeleteRegion(region.id)}>
+                                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                    <polyline points="3 6 5 6 21 6"></polyline>
+                                                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                                                </svg>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
                             {:else}
-                                <span class="badge badge-warning">OFFICE WORKER</span>
-                            {/if}
-                        </td>
-                        <td style="font-family: monospace; color: var(--text-secondary);">{emp.login}</td>
-                        <td>{emp.regions.length > 0 ? emp.regions.join(" ↔ ") : "N/A"}</td>
-                        <td style="color: var(--text-tertiary);">{emp.dateAdded}</td>
-                        <td style="text-align: right;">
-                            <div class="actions-cell">
-                                <button class="btn-action btn-edit" title="Edit" onclick={() => openEditModal(emp)}>
-                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-                                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
-                                    </svg>
-                                </button>
-                                <button class="btn-action btn-delete" title="Remove" onclick={() => deleteEmployee(emp.id)}>
-                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                        <polyline points="3 6 5 6 21 6"></polyline>
-                                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                                    </svg>
-                                </button>
-                            </div>
-                        </td>
-                    </tr>
-                {/each}
-            </tbody>
-        </table>
-    </div>
-    </div>
-    {:else if activeTab === 'regions'}
-    <div in:fade={{duration: 200}}>
-    <div class="glass-panel" style="padding: 0; overflow: hidden;">
-        <div style="padding: 1.5rem; border-bottom: 1px solid var(--border-light);">
-            <h3>Current Regions</h3>
-            <p style="color: var(--text-tertiary); font-size: 0.9rem; margin-top: 0.5rem;">List of all service areas.</p>
-        </div>
-        <table class="data-table">
-            <thead>
-                <tr>
-                    <th>ID</th>
-                    <th>Name</th>
-                    <th style="text-align: right;">Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                {#each regions as region}
-                    <tr>
-                        <td style="font-family: monospace; color: var(--text-tertiary);">#{region.id}</td>
-                        <td style="font-weight: 500;">{region.name}</td>
-                        <td style="text-align: right;">
-                            <div class="actions-cell">
-                                <button class="btn-action btn-edit" title="Edit" onclick={() => openEditRegionModal(region)}>
-                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-                                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
-                                    </svg>
-                                </button>
-                                <button class="btn-action btn-delete" title="Remove" onclick={() => handleDeleteRegion(region.id)}>
-                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                        <polyline points="3 6 5 6 21 6"></polyline>
-                                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                                    </svg>
-                                </button>
-                            </div>
-                        </td>
-                    </tr>
-                {:else}
-                    <tr>
-                        <td colspan="3" style="text-align: center; padding: 2rem; color: var(--text-tertiary);">No regions defined.</td>
-                    </tr>
-                {/each}
-            </tbody>
-        </table>
-    </div>
-    </div>
-    {:else}
-    <div in:fade={{duration: 200}}>
-        <div class="glass-panel" style="padding: 0; overflow: hidden;">
-            <div style="padding: 1.5rem; border-bottom: 1px solid var(--border-light);">
-                <h3>Pricing History</h3>
-                <p style="color: var(--text-tertiary); font-size: 0.9rem; margin-top: 0.5rem;">Latest active rule is shown at the top.</p>
+                                <tr>
+                                    <td colspan="3" style="text-align: center; padding: 2rem; color: var(--text-tertiary);">No regions defined.</td>
+                                </tr>
+                            {/each}
+                        </tbody>
+                    </table>
+                </div>
             </div>
-            <div style="overflow-x: auto;">
-                <table class="data-table">
-                    <thead>
-                        <tr>
-                            <th>Date Set</th>
-                            <th>Base (N/E)</th>
-                            <th>Weight</th>
-                            <th>L / W / H</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {#each priceDeltas as pd, idx}
-                            <tr>
-                                <td style="white-space: nowrap;">
-                                    {new Date(pd.createdAt).toLocaleDateString()}
-                                    {#if idx === 0}
-                                        <span class="badge badge-success" style="margin-left: 0.5rem;">ACTIVE</span>
-                                    {/if}
-                                </td>
-                                <td style="font-weight: 600;">${pd.normalModeDelta} / ${pd.expressModeDelta}</td>
-                                <td>${pd.weightDelta}</td>
-                                <td style="color: var(--text-secondary); font-size: 0.85rem;">
-                                    {pd.lengthDelta} / {pd.widthDelta} / {pd.heightDelta}
-                                </td>
-                            </tr>
-                        {:else}
-                            <tr>
-                                <td colspan="5" style="text-align: center; padding: 2rem; color: var(--text-tertiary);">No pricing rules found.</td>
-                            </tr>
-                        {/each}
-                    </tbody>
-                </table>
+        {:else}
+            <div in:fade={{duration: 200}}>
+                <div class="glass-panel" style="padding: 0; overflow: hidden;">
+                    <div style="padding: 1.5rem; border-bottom: 1px solid var(--border-color);">
+                        <h3>Pricing History</h3>
+                        <p style="color: var(--text-tertiary); font-size: 0.9rem; margin-top: 0.5rem;">Latest active rule is shown at the top.</p>
+                    </div>
+                    <div style="overflow-x: auto;">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Date Set</th>
+                                    <th>Base (N/E)</th>
+                                    <th>Weight</th>
+                                    <th>L / W / H</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {#each priceDeltas as pd, idx}
+                                    <tr>
+                                        <td style="white-space: nowrap;">
+                                            {new Date(pd.createdAt).toLocaleDateString()}
+                                            {#if idx === 0}
+                                                <span class="badge badge-success" style="margin-left: 0.5rem;">ACTIVE</span>
+                                            {/if}
+                                        </td>
+                                        <td style="font-weight: 600;">${pd.normalModeDelta} / ${pd.expressModeDelta}</td>
+                                        <td>${pd.weightDelta}</td>
+                                        <td style="color: var(--text-secondary); font-size: 0.85rem;">
+                                            {pd.lengthDelta} / {pd.widthDelta} / {pd.heightDelta}
+                                        </td>
+                                    </tr>
+                                {:else}
+                                    <tr>
+                                        <td colspan="5" style="text-align: center; padding: 2rem; color: var(--text-tertiary);">No pricing rules found.</td>
+                                    </tr>
+                                {/each}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
             </div>
-        </div>
+        {/if}
     </div>
-    {/if}
 </div>
 
 {#if showAddModal}
@@ -812,6 +815,11 @@
 {/if}
 
 <style>
+    .tab-content-wrapper {
+        min-height: 500px;
+        position: relative;
+    }
+
     .dashboard-panel {
         padding: 2rem;
     }
@@ -881,27 +889,28 @@
 
     .tab-btn:hover {
         color: var(--primary);
-        background: rgba(79, 70, 229, 0.05);
+        background: rgba(14, 165, 233, 0.1);
     }
 
     .tab-btn.active {
-        color: var(--primary);
+        color: var(--bg-color);
         border-bottom-color: var(--primary);
-        background: rgba(79, 70, 229, 0.05);
+        background: var(--primary);
     }
 
     .badge {
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        padding: 0.25rem 0.75rem;
+        padding: 0.4rem 1rem;
         border-radius: 9999px;
-        font-size: 0.75rem;
-        font-weight: 600;
+        font-size: 0.7rem;
+        font-weight: 700;
         text-transform: uppercase;
-        letter-spacing: 0.025em;
-        min-width: 120px;
-        height: 24px;
+        letter-spacing: 0.05em;
+        min-width: 140px;
+        line-height: 1;
+        text-align: center;
     }
 
     .badge-success {
@@ -915,7 +924,7 @@
     }
 
     .badge-admin {
-        background: rgba(79, 70, 229, 0.1);
+        background: rgba(15, 23, 42, 0.1);
         color: var(--primary);
     }
 

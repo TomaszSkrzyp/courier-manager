@@ -94,6 +94,8 @@
 
     .sidebar {
         width: 250px;
+        min-width: 250px;
+        flex-shrink: 0;
         background: var(--surface-color);
         border-radius: var(--radius-lg);
         box-shadow: var(--shadow-sm);
@@ -102,6 +104,8 @@
         height: fit-content;
         position: sticky;
         top: 100px;
+        display: flex;
+        flex-direction: column;
     }
 
     .sidebar-header {
@@ -136,12 +140,12 @@
     }
 
     .sidebar-link:hover {
-        background: rgba(79, 70, 229, 0.05);
+        background: rgba(14, 165, 233, 0.05);
         color: var(--primary);
     }
 
     .sidebar-link.active {
-        background: rgba(79, 70, 229, 0.1);
+        background: rgba(14, 165, 233, 0.1);
         color: var(--primary);
         border-left-color: var(--primary);
         font-weight: 600;
@@ -149,9 +153,11 @@
 
     .dashboard-content {
         flex: 1;
+        min-width: 0;
         padding: 0 !important;
         max-width: 100% !important;
         margin: 0 !important;
+        overflow: hidden;
     }
 
     @media (max-width: 768px) {

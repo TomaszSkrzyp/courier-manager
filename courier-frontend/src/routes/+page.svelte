@@ -56,7 +56,7 @@
 
 <div class="tracking-hero">
     <div class="hero-content animate-fade-in">
-        <h1 style="font-size: 3rem; margin-bottom: 0.5rem; background: linear-gradient(to right, var(--primary), var(--secondary)); -webkit-background-clip: text; color: transparent;">
+        <h1 style="font-size: 3rem; margin-bottom: 0.5rem; color: var(--primary);">
             Track Your Package
         </h1>
         <p style="font-size: 1.2rem; color: var(--text-secondary); margin-bottom: 2.5rem;">
