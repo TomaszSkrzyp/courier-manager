@@ -14,14 +14,49 @@
 
     let employees = $state<Employee[]>([]);
     let regions = $state<{id: number, name: string}[]>([]);
-    let activeTab = $state("personnel"); // 'personnel', 'pricing', 'regions'
+    let activeTab = $state("staff"); // 'staff', 'pricing', 'regions'
     
+    // Pagination state for employees
+    let currentPage = $state(0);
+    let totalPages = $state(0);
+    let totalElements = $state(0);
+    let isLoadingData = $state(false);
+
     let newRegionName = $state("");
     let showAddRegionModal = $state(false);
     let showAddPriceModal = $state(false);
     let showEditRegionModal = $state(false);
     let editingRegionId = $state<number | null>(null);
     let editRegionName = $state("");
+
+    let errorMessage = $state("");
+
+    async function fetchEmployees(page = 0) {
+        isLoadingData = true;
+        errorMessage = "";
+        try {
+            const res = await fetch(`http://localhost:8080/api/employees?page=${page}&size=10`);
+            if (res.ok) {
+                const data = await res.json();
+                if (data && data.content) {
+                    employees = data.content;
+                    currentPage = data.number;
+                    totalPages = data.totalPages;
+                    totalElements = data.totalElements;
+                } else {
+                    employees = [];
+                    errorMessage = "Invalid data format from server.";
+                }
+            } else {
+                errorMessage = `Server error: ${res.status}`;
+            }
+        } catch (e) {
+            console.error("Failed to fetch employees", e);
+            errorMessage = "Connection failed.";
+        } finally {
+            isLoadingData = false;
+        }
+    }
 
     async function handleAddRegion(e: SubmitEvent) {
         e.preventDefault();
@@ -54,8 +89,7 @@
                 });
                 if (res.ok) {
                     regions = regions.filter(r => r.id !== id);
-                    const empRes = await fetch("http://localhost:8080/api/employees");
-                    if (empRes.ok) employees = await empRes.json();
+                    fetchEmployees(currentPage);
                 }
             } catch (e) {
                 console.error("Failed to delete region", e);
@@ -86,8 +120,7 @@
                 editingRegionId = null;
                 editRegionName = "";
 
-                const empRes = await fetch("http://localhost:8080/api/employees");
-                if (empRes.ok) employees = await empRes.json();
+                fetchEmployees(currentPage);
             }
         } catch (e) {
             console.error("Failed to update region", e);
@@ -142,8 +175,7 @@
 
     onMount(async () => {
         try {
-            const empRes = await fetch("http://localhost:8080/api/employees");
-            if (empRes.ok) employees = await empRes.json();
+            fetchEmployees(0);
             
             const regRes = await fetch("http://localhost:8080/api/regions");
             if (regRes.ok) regions = await regRes.json();
@@ -160,6 +192,12 @@
             console.error("Failed to fetch initial data", e);
         }
     });
+
+    function handlePageChange(newPage: number) {
+        if (newPage >= 0 && newPage < totalPages) {
+            fetchEmployees(newPage);
+        }
+    }
 
     async function handleAddPriceDelta(e: SubmitEvent) {
         e.preventDefault();
@@ -197,8 +235,7 @@
             });
 
             if (res.ok) {
-                const added = await res.json();
-                employees = [...employees, added];
+                fetchEmployees(currentPage);
                 
                 showAddModal = false;
                 newEmp = {
@@ -229,7 +266,7 @@
                     method: "DELETE"
                 });
                 if (res.ok) {
-                    employees = employees.filter(e => e.id !== id);
+                    fetchEmployees(currentPage);
                 }
             } catch (e) {
                 console.error("Failed to delete employee", e);
@@ -248,6 +285,7 @@
             firstName: emp.firstName,
             lastName: emp.lastName,
             login: emp.login,
+            password: "",
             role: emp.role,
             regions: regs
         };
@@ -269,8 +307,7 @@
             });
 
             if (res.ok) {
-                const updated = await res.json();
-                employees = employees.map(emp => emp.id === editingId ? updated : emp);
+                fetchEmployees(currentPage);
                 showEditModal = false;
                 editingId = null;
                 
@@ -287,43 +324,45 @@
 
 <div class="dashboard-panel animate-fade-in">
     <div class="panel-header">
-        <div>
+        <div class="header-main">
             <h2>Admin Dashboard</h2>
-            <div style="display: flex; gap: 1rem; margin-top: 1rem;">
-                <button class="tab-btn" class:active={activeTab === 'personnel'} onclick={() => activeTab = 'personnel'}>Personnel Management</button>
+            <div class="tabs-row">
+                <button class="tab-btn" class:active={activeTab === 'staff'} onclick={() => activeTab = 'staff'}>Staff Management</button>
                 <button class="tab-btn" class:active={activeTab === 'pricing'} onclick={() => activeTab = 'pricing'}>Pricing Rules</button>
                 <button class="tab-btn" class:active={activeTab === 'regions'} onclick={() => activeTab = 'regions'}>Region Management</button>
             </div>
         </div>
-        {#if activeTab === 'personnel'}
-            <button class="btn btn-primary" onclick={() => showAddModal = true}>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 0.5rem;">
-                    <line x1="12" y1="5" x2="12" y2="19"></line>
-                    <line x1="5" y1="12" x2="19" y2="12"></line>
-                </svg>
-                Add New Employee
-            </button>
-        {:else if activeTab === 'regions'}
-            <button class="btn btn-primary" onclick={() => showAddRegionModal = true}>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 0.5rem;">
-                    <line x1="12" y1="5" x2="12" y2="19"></line>
-                    <line x1="5" y1="12" x2="19" y2="12"></line>
-                </svg>
-                Add New Region
-            </button>
-        {:else if activeTab === 'pricing'}
-            <button class="btn btn-primary" onclick={() => showAddPriceModal = true}>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 0.5rem;">
-                    <line x1="12" y1="5" x2="12" y2="19"></line>
-                    <line x1="5" y1="12" x2="19" y2="12"></line>
-                </svg>
-                Set New Pricing Rule
-            </button>
-        {/if}
+        <div class="header-actions">
+            {#if activeTab === 'staff'}
+                <button class="btn btn-primary action-btn" onclick={() => showAddModal = true}>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="12" y1="5" x2="12" y2="19"></line>
+                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                    </svg>
+                    Add Employee
+                </button>
+            {:else if activeTab === 'regions'}
+                <button class="btn btn-primary action-btn" onclick={() => showAddRegionModal = true}>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="12" y1="5" x2="12" y2="19"></line>
+                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                    </svg>
+                    Add Region
+                </button>
+            {:else if activeTab === 'pricing'}
+                <button class="btn btn-primary action-btn" onclick={() => showAddPriceModal = true}>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="12" y1="5" x2="12" y2="19"></line>
+                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                    </svg>
+                    New Pricing Rule
+                </button>
+            {/if}
+        </div>
     </div>
 
     <div class="tab-content-wrapper">
-        {#if activeTab === 'personnel'}
+        {#if activeTab === 'staff'}
             <div in:fade={{duration: 200}}>
                 <div class="stats-grid">
                     <div class="glass-panel stat-card">
@@ -337,7 +376,7 @@
                         </div>
                         <div class="stat-info">
                             <h3>Total Personnel</h3>
-                            <div class="stat-value">{employees.length}</div>
+                            <div class="stat-value">{totalElements}</div>
                         </div>
                     </div>
 
@@ -351,8 +390,8 @@
                             </svg>
                         </div>
                         <div class="stat-info">
-                            <h3>Active Couriers</h3>
-                            <div class="stat-value">{employees.filter(e => e.role === 'COURIER').length}</div>
+                            <h3>Active Staff</h3>
+                            <div class="stat-value">{totalElements}</div>
                         </div>
                     </div>
 
@@ -365,8 +404,8 @@
                             </svg>
                         </div>
                         <div class="stat-info">
-                            <h3>Office Workers</h3>
-                            <div class="stat-value">{employees.filter(e => e.role === 'WORKER').length}</div>
+                            <h3>Regions</h3>
+                            <div class="stat-value">{regions.length}</div>
                         </div>
                     </div>
                 </div>
@@ -385,41 +424,79 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                {#each employees as emp}
-                                    <tr in:slide>
-                                        <td style="font-weight: 500;">{emp.firstName} {emp.lastName}</td>
-                                        <td>
-                                            {#if emp.role === 'ADMIN'}
-                                                <span class="badge badge-admin">SYSTEM ADMIN</span>
-                                            {:else if emp.role === 'COURIER'}
-                                                <span class="badge badge-success">COURIER</span>
-                                            {:else}
-                                                <span class="badge badge-warning">OFFICE WORKER</span>
-                                            {/if}
-                                        </td>
-                                        <td style="font-family: monospace; color: var(--text-secondary);">{emp.login}</td>
-                                        <td>{emp.regions.length > 0 ? emp.regions.join(" ↔ ") : "N/A"}</td>
-                                        <td style="color: var(--text-tertiary);">{emp.dateAdded}</td>
-                                        <td style="text-align: right;">
-                                            <div class="actions-cell">
-                                                <button class="btn-action btn-edit" title="Edit" onclick={() => openEditModal(emp)}>
-                                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-                                                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
-                                                    </svg>
-                                                </button>
-                                                <button class="btn-action btn-delete" title="Remove" onclick={() => deleteEmployee(emp.id)}>
-                                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                                        <polyline points="3 6 5 6 21 6"></polyline>
-                                                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                                                    </svg>
-                                                </button>
-                                            </div>
+                                {#if isLoadingData}
+                                    <tr>
+                                        <td colspan="6" style="text-align: center; padding: 4rem;">
+                                            <div class="spinner"></div>
+                                            <p style="color: var(--text-tertiary); margin-top: 1rem;">Loading personnel...</p>
                                         </td>
                                     </tr>
-                                {/each}
+                                {:else}
+                                    {#each employees as emp}
+                                        <tr in:slide>
+                                            <td style="font-weight: 500;">{emp.firstName} {emp.lastName}</td>
+                                            <td>
+                                                {#if emp.role === 'ADMIN'}
+                                                    <span class="badge badge-admin">SYSTEM ADMIN</span>
+                                                {:else if emp.role === 'COURIER'}
+                                                    <span class="badge badge-success">COURIER</span>
+                                                {:else}
+                                                    <span class="badge badge-warning">OFFICE WORKER</span>
+                                                {/if}
+                                            </td>
+                                            <td style="font-family: monospace; color: var(--text-secondary);">{emp.login}</td>
+                                            <td>{emp.regions.length > 0 ? emp.regions.join(" ↔ ") : "N/A"}</td>
+                                            <td style="color: var(--text-tertiary);">{emp.dateAdded}</td>
+                                            <td style="text-align: right;">
+                                                <div class="actions-cell">
+                                                    <button class="btn-action btn-edit" title="Edit" onclick={() => openEditModal(emp)}>
+                                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                                                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                                                        </svg>
+                                                    </button>
+                                                    <button class="btn-action btn-delete" title="Remove" onclick={() => deleteEmployee(emp.id)}>
+                                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                            <polyline points="3 6 5 6 21 6"></polyline>
+                                                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                                                        </svg>
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    {/each}
+                                {/if}
                             </tbody>
                         </table>
+                    </div>
+
+                    <div class="pagination-bar">
+                        <div class="pagination-info">
+                            Showing <strong>{employees.length}</strong> of <strong>{totalElements}</strong> personnel
+                        </div>
+                        <div class="pagination-controls">
+                            <button 
+                                class="btn btn-outline btn-sm" 
+                                disabled={currentPage === 0 || isLoadingData}
+                                onclick={() => handlePageChange(currentPage - 1)}
+                            >
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polyline points="15 18 9 12 15 6"></polyline>
+                                </svg>
+                                Previous
+                            </button>
+                            <span class="page-indicator">Page <strong>{currentPage + 1}</strong> of <strong>{totalPages || 1}</strong></span>
+                            <button 
+                                class="btn btn-outline btn-sm" 
+                                disabled={currentPage >= totalPages - 1 || isLoadingData}
+                                onclick={() => handlePageChange(currentPage + 1)}
+                            >
+                                Next
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polyline points="9 18 15 12 9 6"></polyline>
+                                </svg>
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -827,8 +904,34 @@
     .panel-header {
         display: flex;
         justify-content: space-between;
-        align-items: flex-end;
+        align-items: center;
         margin-bottom: 2rem;
+        min-height: 80px; /* Fixed height to prevent layout jumping */
+    }
+
+    .header-main {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    .tabs-row {
+        display: flex;
+        gap: 1rem;
+    }
+
+    .header-actions {
+        display: flex;
+        align-items: center;
+    }
+
+    .action-btn {
+        padding: 0.75rem 1.5rem;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        white-space: nowrap;
     }
 
     .stats-grid {
@@ -962,15 +1065,7 @@
     }
 
     .data-table tbody tr:hover {
-        background-color: rgba(79, 70, 229, 0.02);
-    }
-
-    /* Pricing history specific */
-    .pricing-grid {
-        display: grid; 
-        grid-template-columns: 350px 1fr; 
-        gap: 1.5rem;
-        align-items: start;
+        background-color: rgba(14, 165, 233, 0.05);
     }
 
     .btn-action {
@@ -990,8 +1085,8 @@
     }
 
     .btn-edit:hover {
-        background: rgba(79, 70, 229, 0.1);
-        border-color: rgba(79, 70, 229, 0.2);
+        background: rgba(14, 165, 233, 0.1);
+        border-color: rgba(14, 165, 233, 0.2);
     }
 
     .btn-delete {
@@ -1003,10 +1098,37 @@
         border-color: rgba(239, 68, 68, 0.2);
     }
 
-    @media (max-width: 1100px) {
-        .pricing-grid {
-            grid-template-columns: 1fr;
-        }
+    .pagination-bar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1.5rem;
+        background: rgba(0,0,0,0.02);
+        border-top: 1px solid var(--border-color);
+    }
+
+    .pagination-info {
+        font-size: 0.875rem;
+        color: var(--text-secondary);
+    }
+
+    .pagination-controls {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    .page-indicator {
+        font-size: 0.875rem;
+        color: var(--text-primary);
+    }
+
+    .btn-sm {
+        padding: 0.4rem 0.8rem;
+        font-size: 0.8125rem;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
     }
 
     .modal-backdrop {
@@ -1029,5 +1151,19 @@
         margin: 1rem;
         max-height: 90vh;
         overflow-y: auto;
+    }
+
+    .spinner {
+        width: 30px;
+        height: 30px;
+        border: 3px solid rgba(15, 23, 42, 0.1);
+        border-radius: 50%;
+        border-top-color: var(--primary);
+        animation: spin 1s ease-in-out infinite;
+        margin: 0 auto 1rem auto;
+    }
+
+    @keyframes spin {
+        to { transform: rotate(360deg); }
     }
 </style>

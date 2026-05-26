@@ -60,6 +60,16 @@ public class ParcelService {
                 .collect(Collectors.toList());
     }
 
+    public org.springframework.data.domain.Page<ParcelDTO> getParcelsPage(org.springframework.data.domain.Pageable pageable) {
+        return parcelRepository.findAll(pageable).map(ParcelDTO::fromEntity);
+    }
+
+    public org.springframework.data.domain.Page<ParcelDTO> searchParcels(String search, String status, org.springframework.data.domain.Pageable pageable) {
+        String searchTerm = (search == null || search.trim().isEmpty()) ? null : "%" + search.trim().toLowerCase() + "%";
+        String statusFilter = (status == null || status.equalsIgnoreCase("All")) ? "All" : status;
+        return parcelRepository.searchParcels(searchTerm, statusFilter, pageable).map(ParcelDTO::fromEntity);
+    }
+
     public Optional<ParcelDTO> getParcelById(Integer id) {
         return parcelRepository.findById(id).map(ParcelDTO::fromEntity);
     }

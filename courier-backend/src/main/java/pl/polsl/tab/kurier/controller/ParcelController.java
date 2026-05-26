@@ -2,6 +2,9 @@ package pl.polsl.tab.kurier.controller;
 
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import pl.polsl.tab.kurier.dto.ParcelCreateDTO;
@@ -19,8 +22,11 @@ public class ParcelController {
     private ParcelService parcelService;
 
     @GetMapping
-    public List<ParcelDTO> getAllParcels() {
-        return parcelService.getAllParcels();
+    public ResponseEntity<Page<ParcelDTO>> getParcels(
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) String status,
+            @PageableDefault(size = 10) Pageable pageable) {
+        return ResponseEntity.ok(parcelService.searchParcels(search, status, pageable));
     }
 
     @PostMapping

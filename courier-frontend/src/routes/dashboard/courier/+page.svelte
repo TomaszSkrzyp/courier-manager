@@ -48,10 +48,10 @@
                     deliveryMode: p.deliveryMode || "NORMAL",
                     senderCity: p.senderCity || "N/A",
                     senderAddress: p.senderAddress || "N/A",
-                    weight: p.weight || 0,
-                    height: p.height || 0,
-                    width: p.width || 0,
-                    length: p.length || 0,
+                    weight: Number(p.weight) || 0,
+                    height: Number(p.height) || 0,
+                    width: Number(p.width) || 0,
+                    length: Number(p.length) || 0,
                     fragility: p.fragility || "no",
                     nextRegion: p.nextRegion || "N/A"
                 }));
@@ -609,7 +609,7 @@
     .spinner {
         width: 40px;
         height: 40px;
-        border: 3px solid rgba(79, 70, 229, 0.3);
+        border: 3px solid rgba(15, 23, 42, 0.1);
         border-radius: 50%;
         border-top-color: var(--primary);
         animation: spin 1s ease-in-out infinite;

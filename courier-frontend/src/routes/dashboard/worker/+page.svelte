@@ -1,7 +1,7 @@
 <script lang="ts">
     import { auth } from '$lib/auth.svelte';
     import { onMount } from 'svelte';
-    import { slide } from 'svelte/transition';
+    import { fade, slide } from 'svelte/transition';
 
     type Status = string;
 
@@ -30,22 +30,53 @@
 
     let packages = $state<Package[]>([]);
     let statuses = $state<string[]>(["None", "Created", "Collected", "In Transit", "Out for Delivery", "Delivered", "Failed", "Lost", "Damaged"]);
-    let filteredPackages = $derived(packages.filter(p => {
-        if (filterStatus && filterStatus !== 'All' && p.status !== filterStatus) return false;
-        if (searchQuery && !p.trackingNumber.includes(searchQuery) && !p.city.toLowerCase().includes(searchQuery.toLowerCase())) return false;
-        return true;
-    }));
-
-    let filterStatus = $state("All");
-    let searchQuery = $state("");
+    
     let activeTab = $state("manage"); // 'manage' or 'reports'
+    let isLoadingData = $state(false);
+    let searchQuery = $state("");
+    let filterStatus = $state("All");
 
-    onMount(async () => {
+    // Pagination state
+    let currentPage = $state(0);
+    let totalPages = $state(0);
+    let totalElements = $state(0);
+
+    let errorMessage = $state("");
+
+    async function fetchPackages(page = 0) {
+        isLoadingData = true;
+        errorMessage = "";
         try {
-            const res = await fetch("http://localhost:8080/api/parcels");
+            const params = new URLSearchParams({
+                page: page.toString(),
+                size: "10",
+                status: filterStatus
+            });
+            if (searchQuery.trim()) {
+                params.append("search", searchQuery.trim());
+            }
+
+            const res = await fetch(`http://localhost:8080/api/parcels?${params.toString()}`);
             if (res.ok) {
                 const data = await res.json();
-                packages = data.map((p: any) => ({
+                
+                // Handle different response formats (Paginated vs Direct List)
+                let content = [];
+                if (data && data.content && Array.isArray(data.content)) {
+                    content = data.content;
+                    currentPage = data.number ?? 0;
+                    totalPages = data.totalPages ?? 1;
+                    totalElements = data.totalElements ?? content.length;
+                } else if (Array.isArray(data)) {
+                    content = data;
+                    currentPage = 0;
+                    totalPages = 1;
+                    totalElements = data.length;
+                } else {
+                    throw new Error("Invalid data structure received");
+                }
+
+                packages = content.map((p: any) => ({
                     id: p.parcelId || Math.random(),
                     trackingNumber: p.trackingNumber || "1234567890",
                     city: p.city || "N/A",
@@ -55,28 +86,57 @@
                     deliveryMode: p.deliveryMode || "NORMAL",
                     address: p.address || "N/A",
                     senderCity: p.senderCity || "N/A",
-                    weight: p.weight || 0,
-                    height: p.height || 0,
-                    width: p.width || 0,
-                    length: p.length || 0,
+                    weight: Number(p.weight) || 0,
+                    height: Number(p.height) || 0,
+                    width: Number(p.width) || 0,
+                    length: Number(p.length) || 0,
                     fragility: p.fragility || "no",
                     expectedDelivery: p.expectedDelivery || "N/A",
-                    price: p.price || 0,
+                    price: Number(p.price) || 0,
                     phoneNumber: p.phoneNumber || "N/A",
                     comment: p.comment || "",
                     showDetails: false
                 }));
+            } else {
+                errorMessage = `Server error: ${res.status} ${res.statusText}`;
             }
+        } catch (err) {
+            console.error("Fetch error:", err);
+            errorMessage = "Failed to load data. Please check server connection.";
+        } finally {
+            isLoadingData = false;
+        }
+    }
 
+    // Debounce search and status change
+    let searchTimeout: any;
+    $effect(() => {
+        const query = searchQuery;
+        const status = filterStatus;
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(() => {
+            fetchPackages(0);
+        }, 400);
+    });
+
+    onMount(async () => {
+        fetchPackages(0);
+        try {
             const statusRes = await fetch("http://localhost:8080/api/statuses");
             if (statusRes.ok) {
                 const statusData = await statusRes.json();
                 statuses = statusData.map((s: any) => s.name);
             }
         } catch (err) {
-            console.error("Connection error.", err);
+            console.error("Failed to fetch statuses", err);
         }
     });
+
+    function handlePageChange(newPage: number) {
+        if (newPage >= 0 && newPage < totalPages) {
+            fetchPackages(newPage);
+        }
+    }
 
     function toggleDetails(pkg: Package) {
         pkg.showDetails = !pkg.showDetails;
@@ -164,7 +224,7 @@
                         <input 
                             type="text" 
                             bind:value={searchQuery} 
-                            placeholder="Search by Tracking Number or City..." 
+                            placeholder="Search by Tracking Number or Region..." 
                             class="input-field search-input"
                         />
                     </div>
@@ -195,126 +255,176 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                {#each filteredPackages as pkg}
-                                    <tr class:row-active={pkg.showDetails}>
-                                        <td>
-                                            <button class="btn-icon" onclick={() => toggleDetails(pkg)} title="Toggle Details">
-                                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="transform: rotate({pkg.showDetails ? '90deg' : '0deg'}); transition: transform 0.2s;">
-                                                    <polyline points="9 18 15 12 9 6"></polyline>
-                                                </svg>
-                                            </button>
-                                        </td>
-                                        <td style="font-family: monospace; font-weight: 600;">{pkg.trackingNumber}</td>
-                                        <td>{pkg.city}</td>
-                                        <td style="font-weight: 600; color: var(--secondary);">${pkg.price.toFixed(2)}</td>
-                                        <td>
-                                            <span class="badge" class:badge-primary={pkg.deliveryMode === 'EXPRESS'} class:badge-outline={pkg.deliveryMode === 'NORMAL'}>
-                                                {pkg.deliveryMode}
-                                            </span>
-                                        </td>
-                                        <td>
-                                            <span class="badge" class:badge-success={pkg.status === 'DELIVERED'} class:badge-warning={['IN_TRANSIT', 'OUT_FOR_DELIVERY'].includes(pkg.status)} class:badge-danger={['LOST', 'DAMAGED', 'FAILED'].includes(pkg.status)} class:badge-info={['REGISTERED', 'PENDING_PICKUP', 'AT_HUB'].includes(pkg.status)}>
-                                                {pkg.status}
-                                            </span>
-                                        </td>
-                                        <td>
-                                            <button 
-                                                class="toggle-btn" 
-                                                class:active={pkg.verified}
-                                                onclick={() => toggleVerified(pkg)}
-                                            >
-                                                <div class="toggle-knob"></div>
-                                            </button>
-                                        </td>
-                                        <td>
-                                            <select 
-                                                class="action-select" 
-                                                value={pkg.status}
-                                                onchange={(e) => changeStatus(pkg, e.currentTarget.value as Status)}
-                                            >
-                                                {#each statuses as s}
-                                                    <option value={s}>{s}</option>
-                                                {/each}
-                                            </select>
+                                {#if isLoadingData}
+                                    <tr>
+                                        <td colspan="8" style="text-align: center; padding: 4rem;">
+                                            <div class="spinner"></div>
+                                            <p style="color: var(--text-tertiary); margin-top: 1rem;">Loading parcels...</p>
                                         </td>
                                     </tr>
-                                    {#if pkg.showDetails}
-                                        <tr transition:slide>
-                                            <td colspan="8" style="padding: 0;">
-                                                <div class="details-panel animate-fade-in">
-                                                    <div class="grid-responsive">
-                                                        <div class="details-section">
-                                                            <h5>Sender & Destination</h5>
-                                                            <div class="detail-item">
-                                                                <span class="label">From:</span>
-                                                                <span class="value">{pkg.senderCity}</span>
-                                                            </div>
-                                                            <div class="detail-item">
-                                                                <span class="label">To:</span>
-                                                                <span class="value">{pkg.city}</span>
-                                                            </div>
-                                                            <div class="detail-item">
-                                                                <span class="label">Address:</span>
-                                                                <span class="value">{pkg.address}</span>
-                                                            </div>
-                                                            <div class="detail-item">
-                                                                <span class="label">Phone:</span>
-                                                                <span class="value">{pkg.phoneNumber}</span>
-                                                            </div>
-                                                        </div>
-                                                        <div class="details-section">
-                                                            <h5>Physical Attributes</h5>
-                                                            <div class="detail-item">
-                                                                <span class="label">Weight:</span>
-                                                                <span class="value">{pkg.weight} kg</span>
-                                                            </div>
-                                                            <div class="detail-item">
-                                                                <span class="label">Dimensions:</span>
-                                                                <span class="value">{pkg.length}×{pkg.width}×{pkg.height} cm</span>
-                                                            </div>
-                                                            <div class="detail-item">
-                                                                <span class="label">Fragile:</span>
-                                                                <span class="value badge" class:badge-danger={pkg.fragility === 'yes'}>{pkg.fragility.toUpperCase()}</span>
-                                                            </div>
-                                                            <div class="detail-item">
-                                                                <span class="label">Total Price:</span>
-                                                                <span class="value" style="color: var(--secondary); font-weight: 700;">${pkg.price.toFixed(2)}</span>
-                                                            </div>
-                                                        </div>
-                                                        <div class="details-section">
-                                                            <h5>Timing & Notes</h5>
-                                                            <div class="detail-item">
-                                                                <span class="label">Created:</span>
-                                                                <span class="value">{pkg.date}</span>
-                                                            </div>
-                                                            <div class="detail-item">
-                                                                <span class="label">Expected:</span>
-                                                                <span class="value">{pkg.expectedDelivery}</span>
-                                                            </div>
-                                                            {#if pkg.comment}
-                                                                <div class="detail-item" style="flex-direction: column; align-items: flex-start; gap: 0.25rem;">
-                                                                    <span class="label">Customer Comment:</span>
-                                                                    <span class="value" style="font-style: italic; font-weight: 400; line-height: 1.4; background: rgba(0,0,0,0.05); padding: 0.5rem; border-radius: 4px; width: 100%;">
-                                                                        "{pkg.comment}"
-                                                                    </span>
+                                {:else if errorMessage}
+                                    <tr>
+                                        <td colspan="8" style="text-align: center; padding: 4rem; color: var(--danger);">
+                                            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-bottom: 1rem;">
+                                                <circle cx="12" cy="12" r="10"></circle>
+                                                <line x1="12" y1="8" x2="12" y2="12"></line>
+                                                <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                                            </svg>
+                                            <p>{errorMessage}</p>
+                                            <button class="btn btn-outline btn-sm" style="margin-top: 1rem;" onclick={() => fetchPackages(currentPage)}>Try Again</button>
+                                        </td>
+                                    </tr>
+                                {:else}
+                                    {#each packages as pkg}
+                                        <tr class:row-active={pkg.showDetails}>
+                                            <td>
+                                                <button class="btn-icon" onclick={() => toggleDetails(pkg)} title="Toggle Details">
+                                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="transform: rotate({pkg.showDetails ? '90deg' : '0deg'}); transition: transform 0.2s;">
+                                                        <polyline points="9 18 15 12 9 6"></polyline>
+                                                    </svg>
+                                                </button>
+                                            </td>
+                                            <td style="font-family: monospace; font-weight: 600;">{pkg.trackingNumber}</td>
+                                            <td>{pkg.city}</td>
+                                            <td style="font-weight: 600; color: var(--secondary);">${pkg.price.toFixed(2)}</td>
+                                            <td>
+                                                <span class="badge" class:badge-primary={pkg.deliveryMode === 'EXPRESS'} class:badge-outline={pkg.deliveryMode === 'NORMAL'}>
+                                                    {pkg.deliveryMode}
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <span class="badge" class:badge-success={pkg.status === 'DELIVERED'} class:badge-warning={['IN_TRANSIT', 'OUT_FOR_DELIVERY'].includes(pkg.status)} class:badge-danger={['LOST', 'DAMAGED', 'FAILED'].includes(pkg.status)} class:badge-info={['REGISTERED', 'PENDING_PICKUP', 'AT_HUB'].includes(pkg.status)}>
+                                                    {pkg.status}
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <button 
+                                                    class="toggle-btn" 
+                                                    class:active={pkg.verified}
+                                                    onclick={() => toggleVerified(pkg)}
+                                                >
+                                                    <div class="toggle-knob"></div>
+                                                </button>
+                                            </td>
+                                            <td>
+                                                <select 
+                                                    class="action-select" 
+                                                    value={pkg.status}
+                                                    onchange={(e) => changeStatus(pkg, e.currentTarget.value as Status)}
+                                                >
+                                                    {#each statuses as s}
+                                                        <option value={s}>{s}</option>
+                                                    {/each}
+                                                </select>
+                                            </td>
+                                        </tr>
+                                        {#if pkg.showDetails}
+                                            <tr transition:slide>
+                                                <td colspan="8" style="padding: 0;">
+                                                    <div class="details-panel animate-fade-in">
+                                                        <div class="grid-responsive">
+                                                            <div class="details-section">
+                                                                <h5>Sender & Destination</h5>
+                                                                <div class="detail-item">
+                                                                    <span class="label">From:</span>
+                                                                    <span class="value">{pkg.senderCity}</span>
                                                                 </div>
-                                                            {/if}
+                                                                <div class="detail-item">
+                                                                    <span class="label">To:</span>
+                                                                    <span class="value">{pkg.city}</span>
+                                                                </div>
+                                                                <div class="detail-item">
+                                                                    <span class="label">Address:</span>
+                                                                    <span class="value">{pkg.address}</span>
+                                                                </div>
+                                                                <div class="detail-item">
+                                                                    <span class="label">Phone:</span>
+                                                                    <span class="value">{pkg.phoneNumber}</span>
+                                                                </div>
+                                                            </div>
+                                                            <div class="details-section">
+                                                                <h5>Physical Attributes</h5>
+                                                                <div class="detail-item">
+                                                                    <span class="label">Weight:</span>
+                                                                    <span class="value">{pkg.weight} kg</span>
+                                                                </div>
+                                                                <div class="detail-item">
+                                                                    <span class="label">Dimensions:</span>
+                                                                    <span class="value">{pkg.length}×{pkg.width}×{pkg.height} cm</span>
+                                                                </div>
+                                                                <div class="detail-item">
+                                                                    <span class="label">Fragile:</span>
+                                                                    <span class="value badge" class:badge-danger={pkg.fragility === 'yes'}>{pkg.fragility.toUpperCase()}</span>
+                                                                </div>
+                                                                <div class="detail-item">
+                                                                    <span class="label">Total Price:</span>
+                                                                    <span class="value" style="color: var(--secondary); font-weight: 700;">${pkg.price.toFixed(2)}</span>
+                                                                </div>
+                                                            </div>
+                                                            <div class="details-section">
+                                                                <h5>Timing & Notes</h5>
+                                                                <div class="detail-item">
+                                                                    <span class="label">Created:</span>
+                                                                    <span class="value">{pkg.date}</span>
+                                                                </div>
+                                                                <div class="detail-item">
+                                                                    <span class="label">Expected:</span>
+                                                                    <span class="value">{pkg.expectedDelivery}</span>
+                                                                </div>
+                                                                {#if pkg.comment}
+                                                                    <div class="detail-item" style="flex-direction: column; align-items: flex-start; gap: 0.25rem;">
+                                                                        <span class="label">Customer Comment:</span>
+                                                                        <span class="value" style="font-style: italic; font-weight: 400; line-height: 1.4; background: rgba(0,0,0,0.05); padding: 0.5rem; border-radius: 4px; width: 100%;">
+                                                                            "{pkg.comment}"
+                                                                        </span>
+                                                                    </div>
+                                                                {/if}
+                                                            </div>
                                                         </div>
                                                     </div>
-                                                </div>
+                                                </td>
+                                            </tr>
+                                        {/if}
+                                    {/each}
+                                    {#if !isLoadingData && packages.length === 0}
+                                        <tr>
+                                            <td colspan="8" style="text-align: center; padding: 2rem; color: var(--text-tertiary);">
+                                                No packages found.
                                             </td>
                                         </tr>
                                     {/if}
-                                {/each}
-                                {#if filteredPackages.length === 0}
-                                    <tr>
-                                        <td colspan="8" style="text-align: center; padding: 2rem; color: var(--text-tertiary);">
-                                            No packages found matching your criteria.
-                                        </td>
-                                    </tr>
                                 {/if}
                             </tbody>
                         </table>
+                    </div>
+
+                    <div class="pagination-bar">
+                        <div class="pagination-info">
+                            Showing <strong>{packages.length}</strong> of <strong>{totalElements}</strong> parcels
+                        </div>
+                        <div class="pagination-controls">
+                            <button 
+                                class="btn btn-outline btn-sm" 
+                                disabled={currentPage === 0 || isLoadingData}
+                                onclick={() => handlePageChange(currentPage - 1)}
+                            >
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polyline points="15 18 9 12 15 6"></polyline>
+                                </svg>
+                                Previous
+                            </button>
+                            <span class="page-indicator">Page <strong>{currentPage + 1}</strong> of <strong>{totalPages || 1}</strong></span>
+                            <button 
+                                class="btn btn-outline btn-sm" 
+                                disabled={currentPage >= totalPages - 1 || isLoadingData}
+                                onclick={() => handlePageChange(currentPage + 1)}
+                            >
+                                Next
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polyline points="9 18 15 12 9 6"></polyline>
+                                </svg>
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -412,20 +522,21 @@
     .filter-bar {
         display: flex;
         gap: 1rem;
-        padding: 1rem;
+        padding: 1.5rem;
         margin-bottom: 1.5rem;
     }
 
     .search-input {
-        background-image: url("data:image/svg+xml,%3Csvg width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='%239CA3AF' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='11' cy='11' r='8'%3E%3C/circle%3E%3Cline x1='21' y1='21' x2='16.65' y2='16.65'%3E%3C/line%3E%3C/svg%3E");
+        background-image: url("data:image/svg+xml,%3Csvg width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='%2394A3B8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='11' cy='11' r='8'%3E%3C/circle%3E%3Cline x1='21' y1='21' x2='16.65' y2='16.65'%3E%3C/line%3E%3C/svg%3E");
         background-repeat: no-repeat;
         background-position: 1rem center;
         padding-left: 3rem;
     }
 
-    .table-container {
+    .table-responsive {
+        width: 100%;
         overflow-x: auto;
-        padding: 0;
+        -webkit-overflow-scrolling: touch;
     }
 
     .data-table {
@@ -446,6 +557,7 @@
         font-size: 0.875rem;
         text-transform: uppercase;
         letter-spacing: 0.05em;
+        white-space: nowrap;
     }
 
     .data-table tr:last-child td {
@@ -484,10 +596,10 @@
         border-bottom: 1px solid var(--border-color);
     }
 
-    .details-grid {
+    .grid-responsive {
         display: grid;
-        grid-template-columns: repeat(3, 1fr);
-        gap: 2rem;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 1.5rem;
     }
 
     .details-section h5 {
@@ -557,6 +669,39 @@
         font-size: 0.875rem;
     }
 
+    .pagination-bar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1.5rem;
+        background: rgba(0,0,0,0.02);
+        border-top: 1px solid var(--border-color);
+    }
+
+    .pagination-info {
+        font-size: 0.875rem;
+        color: var(--text-secondary);
+    }
+
+    .pagination-controls {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    .page-indicator {
+        font-size: 0.875rem;
+        color: var(--text-primary);
+    }
+
+    .btn-sm {
+        padding: 0.4rem 0.8rem;
+        font-size: 0.8125rem;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
     .report-result {
         border: 2px dashed var(--secondary);
         border-radius: var(--radius-lg);
@@ -568,7 +713,7 @@
     .spinner {
         width: 30px;
         height: 30px;
-        border: 3px solid rgba(79, 70, 229, 0.3);
+        border: 3px solid rgba(15, 23, 42, 0.1);
         border-radius: 50%;
         border-top-color: var(--primary);
         animation: spin 1s ease-in-out infinite;

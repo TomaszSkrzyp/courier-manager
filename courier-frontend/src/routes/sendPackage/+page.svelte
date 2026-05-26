@@ -145,7 +145,7 @@
                 
                 <div class="input-group">
                     <label>Phone Number</label>
-                    <input bind:value={form.phoneNumber} type="tel" placeholder="+48 000 000 000" pattern="^(\+?\d[\d\s]{7,14})$" title="Phone number must contain only digits and optional '+' prefix" class="input-field" required />
+                    <input bind:value={form.phoneNumber} type="tel" placeholder="+48 000 000 000" pattern={'^(\\+?\\d[\\d\\s]{7,14})$'} title="Phone number must contain only digits and optional '+' prefix" class="input-field" required />
                 </div>
                 
                 <div class="grid-2">

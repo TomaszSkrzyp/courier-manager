@@ -1,6 +1,8 @@
 package pl.polsl.tab.kurier.service;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import pl.polsl.tab.kurier.dto.EmployeeDTO;
 import pl.polsl.tab.kurier.model.Address;
@@ -42,6 +44,10 @@ public class EmployeeService {
         return employeeRepository.findAll().stream()
                 .map(EmployeeDTO::fromEntity)
                 .collect(Collectors.toList());
+    }
+
+    public Page<EmployeeDTO> getEmployeesPage(Pageable pageable) {
+        return employeeRepository.findAll(pageable).map(EmployeeDTO::fromEntity);
     }
 
     public EmployeeDTO createEmployee(EmployeeDTO dto) {
