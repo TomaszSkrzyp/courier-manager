@@ -53,6 +53,30 @@ public class ParcelCreateDTOTest {
         assertFalse(violations.isEmpty());
     }
 
+    @Test
+    public void whenPhoneNumberHasLetters_thenViolation() {
+        ParcelCreateDTO dto = createValidDTO();
+        dto.setPhoneNumber("123abc456");
+        Set<ConstraintViolation<ParcelCreateDTO>> violations = validator.validate(dto);
+        assertFalse(violations.isEmpty());
+    }
+
+    @Test
+    public void whenPhoneNumberTooShort_thenViolation() {
+        ParcelCreateDTO dto = createValidDTO();
+        dto.setPhoneNumber("12345");
+        Set<ConstraintViolation<ParcelCreateDTO>> violations = validator.validate(dto);
+        assertFalse(violations.isEmpty());
+    }
+
+    @Test
+    public void whenPhoneNumberValidWithPlus_thenNoViolations() {
+        ParcelCreateDTO dto = createValidDTO();
+        dto.setPhoneNumber("+48 123 456 789");
+        Set<ConstraintViolation<ParcelCreateDTO>> violations = validator.validate(dto);
+        assertTrue(violations.isEmpty());
+    }
+
     private ParcelCreateDTO createValidDTO() {
         ParcelCreateDTO dto = new ParcelCreateDTO();
         dto.setPhoneNumber("123456789");

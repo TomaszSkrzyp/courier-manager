@@ -1,14 +1,12 @@
 package pl.polsl.tab.kurier.dto;
 
-import jakarta.validation.constraints.DecimalMin;
-import jakarta.validation.constraints.Max;
-import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.*;
 import lombok.Data;
 
 @Data
 public class ParcelCreateDTO {
     @NotNull
+    @Pattern(regexp = "^(\\+?\\d[\\d\\s]{7,14})$", message = "Invalid phone number format")
     private String phoneNumber;
 
     @NotNull
