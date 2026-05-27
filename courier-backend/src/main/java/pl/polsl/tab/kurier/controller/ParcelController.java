@@ -58,6 +58,17 @@ public class ParcelController {
         return ResponseEntity.ok(parcelService.getParcelsForCourier(courierId));
     }
 
+    @PatchMapping("/{id}/pickup")
+    public ResponseEntity<ParcelDTO> pickupParcel(@PathVariable Integer id, @RequestBody Map<String, String> body) {
+        Integer employeeId = body.containsKey("employeeId") ? Integer.parseInt(body.get("employeeId")) : null;
+        if (employeeId == null) {
+            return ResponseEntity.badRequest().build();
+        }
+        return parcelService.pickupParcel(id, employeeId)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
+    }
+
     @PatchMapping("/{id}/status")
     public ResponseEntity<ParcelDTO> updateParcelStatus(@PathVariable Integer id, @RequestBody Map<String, String> body) {
         String newStatus = body.get("status");

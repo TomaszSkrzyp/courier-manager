@@ -1,5 +1,8 @@
 <script lang="ts">
     import { fade, slide } from 'svelte/transition';
+    import { onMount } from 'svelte';
+    import { page } from '$app/stores';
+    import { trimObject } from '$lib';
 
     let trackingValue = $state("");
     let foundParcel = $state<any>(null);
@@ -7,10 +10,9 @@
     let showResults = $state(false);
     let isLoading = $state(false);
 
-    async function handleSubmit(e: SubmitEvent) {
-        e.preventDefault();
-
-        if (!trackingValue || trackingValue.length !== 24) {
+    async function performTracking(code: string) {
+        const trimmedCode = code.trim();
+        if (!trimmedCode || trimmedCode.length !== 24) {
             isNumberValid = false;
             showResults = true;
             return;
@@ -22,7 +24,7 @@
         try {
             // Simulate network delay for animation
             await new Promise(r => setTimeout(r, 600));
-            const res = await fetch(`http://localhost:8080/api/parcels/track/${trackingValue}`);
+            const res = await fetch(`http://localhost:8080/api/parcels/track/${trimmedCode}`);
             if (res.ok) {
                 foundParcel = await res.json();
                 isNumberValid = true;
@@ -39,6 +41,19 @@
             showResults = true;
         }
     }
+
+    async function handleSubmit(e: SubmitEvent) {
+        e.preventDefault();
+        await performTracking(trackingValue);
+    }
+
+    onMount(() => {
+        const code = $page.url.searchParams.get('code');
+        if (code) {
+            trackingValue = code;
+            performTracking(code);
+        }
+    });
 
     const statuses = ["Created", "Collected", "In Transit", "Out for Delivery", "Delivered"];
     function getStatusIndex(status: string) {
@@ -115,20 +130,35 @@
                             {foundParcel.deliveryMode}
                         </span>
                         <span class="badge badge-success" style="font-size: 1rem; padding: 0.5rem 1rem;">
-                            {foundParcel.status || "In Transit"}
+                            {#if foundParcel.status === 'AT_HUB'}
+                                AT HUB: {foundParcel.currentRegion}
+                            {:else}
+                                {foundParcel.status || "In Transit"}
+                            {/if}
                         </span>
                     </div>
                 </div>
 
                 <div class="parcel-details">
-                    <div class="detail-item">
-                        <span class="detail-label">From</span>
-                        <span class="detail-value">{foundParcel.senderCity || "Unknown"}</span>
-                    </div>
-                    <div class="detail-item">
-                        <span class="detail-label">To</span>
-                        <span class="detail-value">{foundParcel.city || "Unknown"}</span>
-                    </div>
+                    {#if currentIndex > 0}
+                        <div class="detail-item">
+                            <span class="detail-label">From</span>
+                            <span class="detail-value">{foundParcel.senderCity || "Unknown"}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">To</span>
+                            <span class="detail-value">{foundParcel.city || "Unknown"}</span>
+                        </div>
+                    {:else}
+                        <div class="detail-item">
+                            <span class="detail-label">Pickup Point</span>
+                            <span class="detail-value">{foundParcel.senderCity || "Unknown"}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Destination</span>
+                            <span class="detail-value">{foundParcel.city || "Unknown"}</span>
+                        </div>
+                    {/if}
                     <div class="detail-item">
                         <span class="detail-label">Address</span>
                         <span class="detail-value">{foundParcel.address || "N/A"}</span>

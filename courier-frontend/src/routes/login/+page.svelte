@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { auth } from "../../lib/auth.svelte";
 	import { goto } from "$app/navigation";
+	import { trimObject } from "$lib";
 
 	let user = $state("");
 	let pass = $state("");
@@ -14,7 +15,7 @@
             const res = await fetch("http://localhost:8080/api/employees/login", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ login: user, password: pass })
+                body: JSON.stringify(trimObject({ login: user, password: pass }))
             });
 
             if (res.ok) {

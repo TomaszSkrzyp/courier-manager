@@ -2,6 +2,7 @@
     import { auth } from '$lib/auth.svelte';
     import { onMount } from 'svelte';
     import { fade, slide } from 'svelte/transition';
+    import { trimObject } from '$lib';
 
     type Status = string;
 
@@ -25,6 +26,7 @@
         price: number;
         phoneNumber: string;
         comment: string;
+        currentRegion: string;
         showDetails?: boolean;
     }
 
@@ -95,6 +97,7 @@
                     price: Number(p.price) || 0,
                     phoneNumber: p.phoneNumber || "N/A",
                     comment: p.comment || "",
+                    currentRegion: p.currentRegion || "N/A",
                     showDetails: false
                 }));
             } else {
@@ -162,7 +165,7 @@
             const res = await fetch(`http://localhost:8080/api/parcels/${pkg.id}/status`, {
                 method: "PATCH",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ status: newStatus, comment: "Status updated by worker", employeeId: auth.userId?.toString() })
+                body: JSON.stringify(trimObject({ status: newStatus, comment: "Status updated by worker", employeeId: auth.userId?.toString() }))
             });
             if (res.ok) {
                 pkg.status = newStatus;
@@ -294,7 +297,11 @@
                                             </td>
                                             <td>
                                                 <span class="badge" class:badge-success={pkg.status === 'DELIVERED'} class:badge-warning={['IN_TRANSIT', 'OUT_FOR_DELIVERY'].includes(pkg.status)} class:badge-danger={['LOST', 'DAMAGED', 'FAILED'].includes(pkg.status)} class:badge-info={['REGISTERED', 'PENDING_PICKUP', 'AT_HUB'].includes(pkg.status)}>
-                                                    {pkg.status}
+                                                    {#if pkg.status === 'AT_HUB'}
+                                                        AT HUB: {pkg.currentRegion}
+                                                    {:else}
+                                                        {pkg.status}
+                                                    {/if}
                                                 </span>
                                             </td>
                                             <td>

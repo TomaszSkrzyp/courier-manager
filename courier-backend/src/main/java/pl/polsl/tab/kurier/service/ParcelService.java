@@ -153,7 +153,9 @@ public class ParcelService {
         parcel.setPhoneNumber(dto.getPhoneNumber());
         parcel.setSenderAddress(senderAddress);
         parcel.setDestinationAddress(recipientAddress);
-        parcel.setNextRegion(nextRegion);
+        // Initially, the parcel is in the sender's region and its first goal is the local hub.
+        parcel.setCurrentRegion(senderRegion);
+        parcel.setNextRegion(senderRegion);
         parcel.setDeliveryMode(deliveryMode);
         parcel.setStatus(resolveOrCreateStatus(ParcelStatus.REGISTERED));
         parcel.setVerified(false);
@@ -219,60 +221,62 @@ public class ParcelService {
     }
 
     /**
-     * Called when a courier confirms delivery to the current nextRegion.
-     *
-     * Logic:
-     *   - If nextRegion == destinationRegion → DELIVERED (terminal)
-     *   - Otherwise → AT_HUB (or OUT_FOR_DELIVERY if one hop left),
-     *     nextRegion updated to the next step via BFS
+     * Called when a courier picks up a parcel from sender or a hub.
+     */
+    public Optional<ParcelDTO> pickupParcel(Integer id, Integer employeeId) {
+        return parcelRepository.findById(id).map(parcel -> {
+            Region currentRegion = parcel.getCurrentRegion();
+            Region destinationRegion = parcel.getDestinationAddress().getRegion();
+
+            Status newStatus;
+            // It becomes OUT_FOR_DELIVERY only if it's being picked up
+            // FROM its final destination hub or directly from sender in the same region.
+            if (currentRegion.getRegionId().equals(destinationRegion.getRegionId())) {
+                newStatus = resolveOrCreateStatus(ParcelStatus.OUT_FOR_DELIVERY);
+            } else {
+                newStatus = resolveOrCreateStatus(ParcelStatus.IN_TRANSIT);
+            }
+
+            parcel.setStatus(newStatus);
+            parcelRepository.save(parcel);
+            saveDeliveryUpdate(parcel, employeeId, newStatus, "Package picked up by courier");
+            return ParcelDTO.fromEntity(parcel);
+        });
+    }
+
+    /**
+     * Called when a courier confirms delivery of the parcel to the
+     * current nextRegion.
      */
     public Optional<ParcelDTO> advanceParcel(Integer id, Integer employeeId) {
         return parcelRepository.findById(id).map(parcel -> {
-            Region currentNextRegion = parcel.getNextRegion();
-            
-            if (parcel.getDestinationAddress() == null) {
-                throw new RuntimeException("Parcel destination address is null for ID: " + id);
-            }
-            
+            Region arrivedAtHub = parcel.getNextRegion();
             Region destinationRegion = parcel.getDestinationAddress().getRegion();
-            if (destinationRegion == null) {
-                throw new RuntimeException("Parcel destination region is null for ID: " + id);
-            }
 
-            if (currentNextRegion == null) {
-                throw new RuntimeException("Parcel current nextRegion is null for ID: " + id);
-            }
+            // The parcel is now physically at the hub it was traveling to
+            parcel.setCurrentRegion(arrivedAtHub);
+            
+            Status newStatus = resolveOrCreateStatus(ParcelStatus.AT_HUB);
 
-            Status newStatus;
-
-            if (currentNextRegion.getRegionId().equals(destinationRegion.getRegionId())) {
-                // Arrived at final destination hub -> now out for delivery to the actual address
-                newStatus = resolveOrCreateStatus(ParcelStatus.OUT_FOR_DELIVERY);
-                parcel.setStatus(newStatus);
-            } else {
+            if (!arrivedAtHub.getRegionId().equals(destinationRegion.getRegionId())) {
                 // Arrived at intermediate hub — compute next hop
                 Integer newNextRegionId = routeService.findNextRegionId(
-                        currentNextRegion.getRegionId(), destinationRegion.getRegionId()
+                        arrivedAtHub.getRegionId(), destinationRegion.getRegionId()
                 ).orElseThrow(() -> new RuntimeException(
-                        "Route broken: no path from hub " + currentNextRegion.getRegionId() + " (" + currentNextRegion.getName() + ")"
+                        "Route broken: no path from hub " + arrivedAtHub.getRegionId() + " (" + arrivedAtHub.getName() + ")"
                         + " to destination " + destinationRegion.getRegionId() + " (" + destinationRegion.getName() + ")"
                 ));
 
                 Region newNextRegion = regionRepository.findById(newNextRegionId)
                         .orElseThrow(() -> new RuntimeException("Next region not found: " + newNextRegionId));
 
-                // Last mile if the new nextRegion is already the destination
-                boolean isLastMile = newNextRegionId.equals(destinationRegion.getRegionId());
-                newStatus = resolveOrCreateStatus(
-                        isLastMile ? ParcelStatus.OUT_FOR_DELIVERY : ParcelStatus.AT_HUB
-                );
-
                 parcel.setNextRegion(newNextRegion);
-                parcel.setStatus(newStatus);
             }
+            // If it's already at destination hub, we keep nextRegion as destinationRegion
 
+            parcel.setStatus(newStatus);
             parcelRepository.save(parcel);
-            saveDeliveryUpdate(parcel, employeeId, newStatus, null);
+            saveDeliveryUpdate(parcel, employeeId, newStatus, "Package arrived at hub: " + arrivedAtHub.getName());
             return ParcelDTO.fromEntity(parcel);
         });
     }

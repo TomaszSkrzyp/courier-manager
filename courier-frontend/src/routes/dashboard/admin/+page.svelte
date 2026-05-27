@@ -1,6 +1,7 @@
 <script lang="ts">
     import { slide, fade } from 'svelte/transition';
     import { onMount } from 'svelte';
+    import { trimObject } from '$lib';
 
     interface Employee {
         id: number;
@@ -66,7 +67,7 @@
             const res = await fetch("http://localhost:8080/api/regions", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ name: newRegionName.trim() })
+                body: JSON.stringify(trimObject({ name: newRegionName }))
             });
             if (res.ok) {
                 const added = await res.json();
@@ -111,7 +112,7 @@
             const res = await fetch(`http://localhost:8080/api/regions/${editingRegionId}`, {
                 method: "PUT",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ name: editRegionName.trim() })
+                body: JSON.stringify(trimObject({ name: editRegionName }))
             });
             if (res.ok) {
                 const updated = await res.json();
@@ -206,7 +207,7 @@
             const res = await fetch("http://localhost:8080/api/price-deltas", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(newPriceDelta)
+                body: JSON.stringify(trimObject(newPriceDelta))
             });
             if (res.ok) {
                 const added = await res.json();
@@ -228,10 +229,10 @@
             const res = await fetch("http://localhost:8080/api/employees", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
+                body: JSON.stringify(trimObject({
                     ...newEmp,
                     regions: newEmp.role === 'COURIER' ? newEmp.regions.filter(r => r.trim() !== '') : []
-                })
+                }))
             });
 
             if (res.ok) {
@@ -300,10 +301,10 @@
             const res = await fetch(`http://localhost:8080/api/employees/${editingId}`, {
                 method: "PUT",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
+                body: JSON.stringify(trimObject({
                     ...editEmp,
                     regions: editEmp.role === 'COURIER' ? editEmp.regions.filter(r => r.trim() !== '') : []
-                })
+                }))
             });
 
             if (res.ok) {

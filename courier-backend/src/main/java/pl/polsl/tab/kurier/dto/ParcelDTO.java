@@ -20,6 +20,8 @@ public class ParcelDTO {
 
     // Routing
     private String nextRegion;       // current next hop region name
+    private String currentRegion;    // current physical region name
+    private Integer currentRegionId; // current physical region ID
 
     // Status & verification
     private String status;
@@ -60,6 +62,11 @@ public class ParcelDTO {
 
         if (parcel.getNextRegion() != null) {
             dto.setNextRegion(parcel.getNextRegion().getName());
+        }
+
+        if (parcel.getCurrentRegion() != null) {
+            dto.setCurrentRegion(parcel.getCurrentRegion().getName());
+            dto.setCurrentRegionId(parcel.getCurrentRegion().getRegionId());
         }
 
         if (parcel.getStatus() != null) {

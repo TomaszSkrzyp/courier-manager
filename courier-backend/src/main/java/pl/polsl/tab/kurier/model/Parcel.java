@@ -75,6 +75,11 @@ public class Parcel {
 
     @NotNull
     @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "current_region_id", nullable = false)
+    private Region currentRegion;
+
+    @NotNull
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "status", nullable = false)
     private Status status;
 

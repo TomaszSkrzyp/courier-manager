@@ -203,6 +203,7 @@ public class DataSeeder implements CommandLineRunner {
                 parcel.setDeliveryMode(normal);
                 parcel.setSenderAddress(senderAddr);
                 parcel.setDestinationAddress(recipientAddr);
+                parcel.setCurrentRegion(katowice);
                 parcel.setNextRegion(katowice); // Parcel is in Katowice, waiting for pickup
                 parcel.setStatus(pendingPickup);
                 parcel.setVerified(true);
@@ -238,6 +239,7 @@ public class DataSeeder implements CommandLineRunner {
                 parcel2.setDeliveryMode(normal);
                 parcel2.setSenderAddress(senderAddr2);
                 parcel2.setDestinationAddress(recipientAddr2);
+                parcel2.setCurrentRegion(katowice);
                 parcel2.setNextRegion(katowice);
                 parcel2.setStatus(pendingPickup);
                 parcel2.setVerified(true);

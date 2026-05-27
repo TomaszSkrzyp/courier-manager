@@ -26,6 +26,7 @@
     let deliveryModes = $state<{id: number, name: string}[]>([]);
 
     import { onMount } from 'svelte';
+    import { trimObject } from '$lib';
 
     let regions = $state<{id: number, name: string}[]>([]);
 
@@ -35,7 +36,11 @@
             if (regRes.ok) regions = await regRes.json();
 
             const dmRes = await fetch("http://localhost:8080/api/delivery-modes");
-            if (dmRes.ok) deliveryModes = await dmRes.json();
+            if (dmRes.ok) {
+                deliveryModes = await dmRes.json();
+                const normalMode = deliveryModes.find(m => m.name.toUpperCase() === 'NORMAL');
+                if (normalMode) form.deliveryModeId = normalMode.id;
+            }
         } catch (e) {
             console.error("Failed to fetch form data", e);
         }
@@ -75,7 +80,7 @@
             const res = await fetch("http://localhost:8080/api/parcels", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(form)
+                body: JSON.stringify(trimObject(form))
             });
 
             if (res.ok) {
@@ -98,12 +103,15 @@
     function reset() {
         submitted = false;
         generatedId = "";
+        const normalMode = deliveryModes.find(m => m.name.toUpperCase() === 'NORMAL');
         form = {
             phoneNumber: "",
             senderStreet: "", senderBuildingNumber: "", senderPostalCode: "", senderRegionId: 0,
             recipientStreet: "", recipientBuildingNumber: "", recipientPostalCode: "", recipientRegionId: 0,
             weight: 0, height: 0, width: 0, length: 0,
-            fragility: "no", deliveryModeId: 0, comment: "",
+            fragility: "no", 
+            deliveryModeId: normalMode ? normalMode.id : 0, 
+            comment: "",
         };
     }
 </script>
@@ -132,7 +140,7 @@
             
             <div style="display: flex; gap: 1rem; justify-content: center; margin-top: 2rem;">
                 <button onclick={reset} class="btn btn-outline">Send Another</button>
-                <a href="/" class="btn btn-primary">Track Package</a>
+                <a href="/?code={generatedId}" class="btn btn-primary">Track Package</a>
             </div>
         </div>
     {:else}

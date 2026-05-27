@@ -2,6 +2,7 @@
     import { auth } from '$lib/auth.svelte';
     import { onMount } from 'svelte';
     import { fade, slide } from 'svelte/transition';
+    import { trimObject } from '$lib';
 
     interface Package {
         id: number;
@@ -20,6 +21,8 @@
         length: number;
         fragility: string;
         nextRegion: string;
+        currentRegion: string;
+        currentRegionId: number;
     }
 
     let assignedPackages = $state<Package[]>([]);
@@ -32,7 +35,8 @@
     let commentText = $state("");
     let commentError = $state("");
 
-    onMount(async () => {
+    async function fetchParcels() {
+        isLoading = true;
         try {
             if (!auth.userId) return;
             const res = await fetch(`http://localhost:8080/api/parcels/courier/${auth.userId}`);
@@ -53,7 +57,9 @@
                     width: Number(p.width) || 0,
                     length: Number(p.length) || 0,
                     fragility: p.fragility || "no",
-                    nextRegion: p.nextRegion || "N/A"
+                    nextRegion: p.nextRegion || "N/A",
+                    currentRegion: p.currentRegion || "N/A",
+                    currentRegionId: p.currentRegionId || 0
                 }));
             }
         } catch (e) {
@@ -61,6 +67,10 @@
         } finally {
             isLoading = false;
         }
+    }
+
+    onMount(async () => {
+        await fetchParcels();
     });
 
     async function handleSuccess(pkg: Package) {
@@ -80,13 +90,13 @@
 
     async function handlePickup(pkg: Package) {
         try {
-            const res = await fetch(`http://localhost:8080/api/parcels/${pkg.id}/status`, {
+            const res = await fetch(`http://localhost:8080/api/parcels/${pkg.id}/pickup`, {
                 method: "PATCH",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ status: "IN_TRANSIT", comment: "Package picked up by courier", employeeId: auth.userId?.toString() })
+                body: JSON.stringify({ employeeId: auth.userId?.toString() })
             });
             if (res.ok) {
-                assignedPackages = assignedPackages.map(p => p.id === pkg.id ? { ...p, status: 'IN_TRANSIT' } : p);
+                await fetchParcels();
             }
         } catch (e) {
             console.error("Failed to pick up package", e);
@@ -101,7 +111,7 @@
                 body: JSON.stringify({ employeeId: auth.userId?.toString() })
             });
             if (res.ok) {
-                assignedPackages = assignedPackages.filter(p => p.id !== pkg.id);
+                await fetchParcels();
             }
         } catch (e) {
             console.error("Failed to advance package", e);
@@ -127,7 +137,7 @@
                 const res = await fetch(`http://localhost:8080/api/parcels/${selectedPackage.id}/status`, {
                     method: "PATCH",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ status: selectedStatus, comment: commentText, employeeId: auth.userId?.toString() })
+                    body: JSON.stringify(trimObject({ status: selectedStatus, comment: commentText, employeeId: auth.userId?.toString() }))
                 });
                 
                 if (res.ok) {
@@ -195,16 +205,38 @@
                             </div>
                         </div>
 
-                        <div class="route-container" class:pickup-mode={pkg.status === 'PENDING_PICKUP'}>
+                        <div class="route-container" class:pickup-mode={['PENDING_PICKUP', 'AT_HUB'].includes(pkg.status)}>
                             <div class="route-step from">
-                                <div class="route-label">FROM</div>
+                                <div class="route-label">
+                                    {#if pkg.status === 'PENDING_PICKUP'}
+                                        PICKUP FROM
+                                    {:else if pkg.status === 'OUT_FOR_DELIVERY'}
+                                        DELIVER FROM
+                                    {:else}
+                                        FROM
+                                    {/if}
+                                </div>
                                 <div class="route-content">
-                                    {#if pkg.status === 'PENDING_PICKUP' || pkg.status === 'IN_TRANSIT'}
+                                    {#if pkg.status === 'PENDING_PICKUP'}
                                         <div class="route-main">{pkg.senderAddress}</div>
                                         <div class="route-sub">{pkg.senderCity} <span class="loc-tag">Sender</span></div>
-                                    {:else}
-                                        <div class="route-main">{pkg.nextRegion} Hub</div>
+                                    {:else if pkg.status === 'OUT_FOR_DELIVERY'}
+                                        <div class="route-main">{pkg.currentRegion} Hub</div>
+                                        <div class="route-sub">Local Distribution</div>
+                                    {:else if pkg.status === 'IN_TRANSIT'}
+                                        {#if pkg.currentRegion === pkg.nextRegion}
+                                            <div class="route-main">{pkg.senderAddress}</div>
+                                            <div class="route-sub">{pkg.senderCity} <span class="loc-tag">Sender</span></div>
+                                        {:else}
+                                            <div class="route-main">{pkg.currentRegion} Hub</div>
+                                            <div class="route-sub">Source Hub</div>
+                                        {/if}
+                                    {:else if pkg.status === 'AT_HUB'}
+                                        <div class="route-main">{pkg.currentRegion} Hub</div>
                                         <div class="route-sub">Current Location</div>
+                                    {:else}
+                                        <div class="route-main">{pkg.senderCity}</div>
+                                        <div class="route-sub">Origin</div>
                                     {/if}
                                 </div>
                             </div>
@@ -219,14 +251,22 @@
                             </div>
 
                             <div class="route-step to">
-                                <div class="route-label">TO</div>
+                                <div class="route-label">
+                                    {#if pkg.status === 'OUT_FOR_DELIVERY'}
+                                        DELIVER TO
+                                    {:else}
+                                        TO
+                                    {/if}
+                                </div>
                                 <div class="route-content">
                                     {#if pkg.status === 'OUT_FOR_DELIVERY'}
                                         <div class="route-main">{pkg.address}</div>
                                         <div class="route-sub">{pkg.city} <span class="loc-tag">Recipient</span></div>
-                                    {:else if pkg.status === 'PENDING_PICKUP'}
-                                        <div class="route-main">{pkg.senderAddress}</div>
-                                        <div class="route-sub">{pkg.senderCity} <span class="loc-tag">Pickup Point</span></div>
+                                    {:else if pkg.status === 'PENDING_PICKUP' || (pkg.status === 'IN_TRANSIT' && pkg.currentRegion === pkg.nextRegion)}
+                                        <div class="route-main">{pkg.senderCity} Hub</div>
+                                    {:else if pkg.status === 'AT_HUB' && pkg.currentRegion === pkg.city}
+                                        <div class="route-main">{pkg.address}</div>
+                                        <div class="route-sub">{pkg.city} <span class="loc-tag">Recipient</span></div>
                                     {:else}
                                         <div class="route-main">{pkg.nextRegion} Hub</div>
                                         <div class="route-sub">Target Hub</div>
