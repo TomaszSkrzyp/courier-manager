@@ -278,34 +278,6 @@
         background: rgba(79, 70, 229, 0.05);
     }
 
-    .badge {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        padding: 0.25rem 0.75rem;
-        border-radius: 9999px;
-        font-size: 0.75rem;
-        font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 0.025em;
-        min-width: 100px;
-    }
-
-    .badge-success {
-        background: rgba(16, 185, 129, 0.1);
-        color: var(--secondary);
-    }
-
-    .badge-warning {
-        background: rgba(245, 158, 11, 0.1);
-        color: var(--warning);
-    }
-
-    .badge-admin {
-        background: rgba(79, 70, 229, 0.1);
-        color: var(--primary);
-    }
-
     .results-container {
         max-width: 800px;
         margin: 0 auto 4rem auto;

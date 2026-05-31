@@ -195,7 +195,11 @@
                         <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem;">
                             <div>
                                 <span class="badge" class:badge-warning={pkg.status === 'OUT_FOR_DELIVERY'} class:badge-success={pkg.status === 'DELIVERED'} class:badge-primary={['PENDING_PICKUP', 'AT_HUB', 'IN_TRANSIT'].includes(pkg.status)} class:badge-danger={['LOST', 'DAMAGED', 'FAILED', 'UNDELIVERED'].includes(pkg.status)}>
-                                    {pkg.status.replace(/_/g, ' ')}
+                                    {#if pkg.status === 'AT_HUB'}
+                                        HUB: {pkg.currentRegion}
+                                    {:else}
+                                        {pkg.status.replace(/_/g, ' ')}
+                                    {/if}
                                 </span>
                                 <span class="badge" class:badge-primary={pkg.deliveryMode === 'EXPRESS'} class:badge-outline={pkg.deliveryMode === 'NORMAL'} style="margin-left: 0.5rem;">
                                     {pkg.deliveryMode}

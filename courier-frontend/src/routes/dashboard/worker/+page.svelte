@@ -332,9 +332,9 @@
                                             <td>
                                                 <span class="badge" class:badge-success={pkg.status === 'DELIVERED'} class:badge-warning={['IN_TRANSIT', 'OUT_FOR_DELIVERY'].includes(pkg.status)} class:badge-danger={['LOST', 'DAMAGED', 'FAILED'].includes(pkg.status)} class:badge-info={['REGISTERED', 'PENDING_PICKUP', 'AT_HUB'].includes(pkg.status)}>
                                                     {#if pkg.status === 'AT_HUB'}
-                                                        AT HUB: {pkg.currentRegion}
+                                                        HUB: {pkg.currentRegion}
                                                     {:else}
-                                                        {pkg.status}
+                                                        {pkg.status.replace(/_/g, ' ')}
                                                     {/if}
                                                 </span>
                                             </td>
