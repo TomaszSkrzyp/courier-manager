@@ -8,6 +8,7 @@ import org.hibernate.annotations.CreationTimestamp;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import java.time.LocalDateTime;
 import java.util.Set;
@@ -26,6 +27,7 @@ public class Employee {
 
     @NotBlank
     @Size(min = 11, max = 11)
+    @Pattern(regexp = "^\\d{11}$", message = "PESEL must be exactly 11 digits")
     @Column(nullable = false, length = 11)
     private String pesel;
 

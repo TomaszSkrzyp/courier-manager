@@ -31,12 +31,12 @@ public class EmployeeController {
     }
 
     @PostMapping
-    public ResponseEntity<EmployeeDTO> createEmployee(@RequestBody EmployeeDTO dto) {
+    public ResponseEntity<EmployeeDTO> createEmployee(@jakarta.validation.Valid @RequestBody EmployeeDTO dto) {
         return ResponseEntity.ok(employeeService.createEmployee(dto));
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<EmployeeDTO> updateEmployee(@PathVariable Integer id, @RequestBody EmployeeDTO dto) {
+    public ResponseEntity<EmployeeDTO> updateEmployee(@PathVariable Integer id, @jakarta.validation.Valid @RequestBody EmployeeDTO dto) {
         return employeeService.updateEmployee(id, dto)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());

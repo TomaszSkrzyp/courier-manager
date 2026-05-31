@@ -26,55 +26,109 @@ public class ParcelCreateDTOTest {
     public void whenValidDTO_thenNoViolations() {
         ParcelCreateDTO dto = createValidDTO();
         Set<ConstraintViolation<ParcelCreateDTO>> violations = validator.validate(dto);
-        assertTrue(violations.isEmpty());
+        assertTrue(violations.isEmpty(), "Valid DTO should have no violations");
     }
 
     @Test
-    public void whenWeightTooHigh_thenViolation() {
+    public void whenWeightAtBoundaries_thenNoViolations() {
         ParcelCreateDTO dto = createValidDTO();
-        dto.setWeight(150.0);
-        Set<ConstraintViolation<ParcelCreateDTO>> violations = validator.validate(dto);
-        assertFalse(violations.isEmpty());
+        dto.setWeight(0.1);
+        assertTrue(validator.validate(dto).isEmpty(), "Weight 0.1 should be valid");
+        
+        dto.setWeight(100.0);
+        assertTrue(validator.validate(dto).isEmpty(), "Weight 100.0 should be valid");
     }
 
     @Test
-    public void whenHeightTooLow_thenViolation() {
+    public void whenWeightOutOfBounds_thenViolation() {
         ParcelCreateDTO dto = createValidDTO();
-        dto.setHeight(0.5);
-        Set<ConstraintViolation<ParcelCreateDTO>> violations = validator.validate(dto);
-        assertFalse(violations.isEmpty());
+        dto.setWeight(0.09);
+        assertFalse(validator.validate(dto).isEmpty(), "Weight < 0.1 should be invalid");
+        
+        dto.setWeight(100.1);
+        assertFalse(validator.validate(dto).isEmpty(), "Weight > 100 should be invalid");
     }
 
     @Test
-    public void whenDimensionsTooHigh_thenViolation() {
+    public void whenDimensionsAtBoundaries_thenNoViolations() {
         ParcelCreateDTO dto = createValidDTO();
-        dto.setLength(201.0);
-        Set<ConstraintViolation<ParcelCreateDTO>> violations = validator.validate(dto);
-        assertFalse(violations.isEmpty());
+        dto.setHeight(1.0);
+        dto.setWidth(1.0);
+        dto.setLength(1.0);
+        assertTrue(validator.validate(dto).isEmpty(), "Dimensions of 1.0 should be valid");
+        
+        dto.setHeight(200.0);
+        dto.setWidth(200.0);
+        dto.setLength(200.0);
+        assertTrue(validator.validate(dto).isEmpty(), "Dimensions of 200.0 should be valid");
     }
 
     @Test
-    public void whenPhoneNumberHasLetters_thenViolation() {
+    public void whenDimensionsOutOfBounds_thenViolation() {
         ParcelCreateDTO dto = createValidDTO();
-        dto.setPhoneNumber("123abc456");
-        Set<ConstraintViolation<ParcelCreateDTO>> violations = validator.validate(dto);
-        assertFalse(violations.isEmpty());
+        dto.setHeight(0.9);
+        assertFalse(validator.validate(dto).isEmpty(), "Height < 1.0 should be invalid");
+        
+        dto.setHeight(200.1);
+        assertFalse(validator.validate(dto).isEmpty(), "Height > 200 should be invalid");
     }
 
     @Test
-    public void whenPhoneNumberTooShort_thenViolation() {
+    public void whenMandatoryFieldsBlank_thenViolation() {
         ParcelCreateDTO dto = createValidDTO();
-        dto.setPhoneNumber("12345");
-        Set<ConstraintViolation<ParcelCreateDTO>> violations = validator.validate(dto);
-        assertFalse(violations.isEmpty());
+        
+        String[] fields = {"senderStreet", "senderBuildingNumber", "senderPostalCode", 
+                          "recipientStreet", "recipientBuildingNumber", "recipientPostalCode"};
+        
+        for (String field : fields) {
+            ParcelCreateDTO testDto = createValidDTO();
+            try {
+                java.lang.reflect.Field f = testDto.getClass().getDeclaredField(field);
+                f.setAccessible(true);
+                f.set(testDto, "");
+                assertFalse(validator.validate(testDto).isEmpty(), field + " being blank should be invalid");
+                
+                f.set(testDto, "   ");
+                assertFalse(validator.validate(testDto).isEmpty(), field + " being only spaces should be invalid");
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        }
     }
 
     @Test
-    public void whenPhoneNumberValidWithPlus_thenNoViolations() {
+    public void whenMandatoryIdsNull_thenViolation() {
         ParcelCreateDTO dto = createValidDTO();
-        dto.setPhoneNumber("+48 123 456 789");
-        Set<ConstraintViolation<ParcelCreateDTO>> violations = validator.validate(dto);
-        assertTrue(violations.isEmpty());
+        dto.setSenderRegionId(null);
+        assertFalse(validator.validate(dto).isEmpty(), "SenderRegionId being null should be invalid");
+        
+        dto = createValidDTO();
+        dto.setRecipientRegionId(null);
+        assertFalse(validator.validate(dto).isEmpty(), "RecipientRegionId being null should be invalid");
+        
+        dto = createValidDTO();
+        dto.setDeliveryModeId(null);
+        assertFalse(validator.validate(dto).isEmpty(), "DeliveryModeId being null should be invalid");
+    }
+
+    @Test
+    public void whenInvalidPostalCode_thenViolation() {
+        ParcelCreateDTO dto = createValidDTO();
+        String[] invalidCodes = {"00000", "00-0000", "0-000", "AA-000", "00-00A", ""};
+        for (String code : invalidCodes) {
+            dto.setSenderPostalCode(code);
+            assertFalse(validator.validate(dto).isEmpty(), "Postal code '" + code + "' should be invalid");
+        }
+    }
+
+    @Test
+    public void whenInvalidPhoneNumber_thenViolation() {
+        ParcelCreateDTO dto = createValidDTO();
+        String[] invalidPhones = {"123456", "123abc456", "+48-123-456", "123 456 789 012 345 6", ""};
+        for (String phone : invalidPhones) {
+            dto.setPhoneNumber(phone);
+            assertFalse(validator.validate(dto).isEmpty(), "Phone number '" + phone + "' should be invalid");
+        }
     }
 
     private ParcelCreateDTO createValidDTO() {

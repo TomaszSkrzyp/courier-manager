@@ -7,6 +7,7 @@ import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
 
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
 import java.time.LocalDateTime;
 
 @Entity
@@ -34,6 +35,7 @@ public class Address {
     private String buildingNumber;
 
     @NotBlank
+    @Pattern(regexp = "^\\d{2}-\\d{3}$", message = "Invalid postal code format (00-000)")
     @Column(name = "postal_code", nullable = false)
     private String postalCode;
 

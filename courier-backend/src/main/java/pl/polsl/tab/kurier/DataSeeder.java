@@ -197,7 +197,7 @@ public class DataSeeder implements CommandLineRunner {
                 addressRepository.save(recipientAddr);
 
                 Parcel parcel = new Parcel();
-                parcel.setPhoneNumber("555-123-456");
+                parcel.setPhoneNumber("555 123 456");
                 parcel.setWeight(BigDecimal.valueOf(5.0));
                 parcel.setExpectedTime(LocalDateTime.now().plusDays(2));
                 parcel.setDeliveryMode(normal);
@@ -230,7 +230,7 @@ public class DataSeeder implements CommandLineRunner {
                 addressRepository.save(recipientAddr2);
 
                 Parcel parcel2 = new Parcel();
-                parcel2.setPhoneNumber("555-987-654");
+                parcel2.setPhoneNumber("555 987 654");
                 parcel2.setWeight(BigDecimal.valueOf(2.0));
                 parcel2.setLength(BigDecimal.valueOf(10.0));
                 parcel2.setWidth(BigDecimal.valueOf(10.0));

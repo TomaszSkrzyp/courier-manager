@@ -6,8 +6,10 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
 
+import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
@@ -27,19 +29,24 @@ public class Parcel {
     private String trackingNumber;
 
     @NotBlank
+    @Pattern(regexp = "^(\\+?\\d[\\d\\s]{7,14})$", message = "Invalid phone number format")
     @Column(name = "phoneNumber", nullable = false)
     private String phoneNumber;
 
     @NotNull
+    @DecimalMin(value = "0.1", message = "Weight must be at least 0.1")
     @Column(nullable = false)
     private BigDecimal weight;
 
+    @DecimalMin(value = "1.0", message = "Height must be at least 1")
     @Column
     private BigDecimal height;
 
+    @DecimalMin(value = "1.0", message = "Width must be at least 1")
     @Column
     private BigDecimal width;
 
+    @DecimalMin(value = "1.0", message = "Length must be at least 1")
     @Column
     private BigDecimal length;
 

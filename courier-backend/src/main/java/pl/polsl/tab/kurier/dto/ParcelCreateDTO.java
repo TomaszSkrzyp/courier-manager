@@ -9,22 +9,30 @@ public class ParcelCreateDTO {
     @Pattern(regexp = "^(\\+?\\d[\\d\\s]{7,14})$", message = "Invalid phone number format")
     private String phoneNumber;
 
-    @NotNull
+    @NotBlank(message = "Sender street is required")
     private String senderStreet;
-    @NotNull
+    
+    @NotBlank(message = "Sender building number is required")
     private String senderBuildingNumber;
-    @NotNull
+    
+    @NotBlank(message = "Sender postal code is required")
+    @Pattern(regexp = "^\\d{2}-\\d{3}$", message = "Invalid postal code format (00-000)")
     private String senderPostalCode;
-    @NotNull
+    
+    @NotNull(message = "Sender region is required")
     private Integer senderRegionId;
 
-    @NotNull
+    @NotBlank(message = "Recipient street is required")
     private String recipientStreet;
-    @NotNull
+    
+    @NotBlank(message = "Recipient building number is required")
     private String recipientBuildingNumber;
-    @NotNull
+    
+    @NotBlank(message = "Recipient postal code is required")
+    @Pattern(regexp = "^\\d{2}-\\d{3}$", message = "Invalid postal code format (00-000)")
     private String recipientPostalCode;
-    @NotNull
+    
+    @NotNull(message = "Recipient region is required")
     private Integer recipientRegionId;
 
     @DecimalMin(value = "0.1", message = "Weight must be at least 0.1")

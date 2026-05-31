@@ -32,12 +32,12 @@ public class RegionController {
     }
 
     @PostMapping
-    public RegionDTO createRegion(@RequestBody RegionDTO dto) {
+    public RegionDTO createRegion(@jakarta.validation.Valid @RequestBody RegionDTO dto) {
         return regionService.createRegion(dto);
     }
 
     @PutMapping("/{id}")
-    public RegionDTO updateRegion(@PathVariable Integer id, @RequestBody RegionDTO dto) {
+    public RegionDTO updateRegion(@PathVariable Integer id, @jakarta.validation.Valid @RequestBody RegionDTO dto) {
         return regionService.updateRegion(id, dto);
     }
 

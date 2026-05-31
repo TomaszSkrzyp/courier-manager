@@ -28,7 +28,7 @@ public class PriceDeltaController {
     }
 
     @PostMapping
-    public ResponseEntity<PriceDeltaDTO> createPriceDelta(@RequestBody PriceDeltaDTO dto) {
+    public ResponseEntity<PriceDeltaDTO> createPriceDelta(@jakarta.validation.Valid @RequestBody PriceDeltaDTO dto) {
         return ResponseEntity.status(201).body(priceDeltaService.createPriceDelta(dto));
     }
 }

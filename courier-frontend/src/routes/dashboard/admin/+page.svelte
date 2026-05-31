@@ -640,11 +640,11 @@
                 <div class="grid-2">
                     <div class="input-group">
                         <label>System Login</label>
-                        <input bind:value={newEmp.login} type="text" class="input-field" required />
+                        <input bind:value={newEmp.login} type="text" class="input-field" required minlength="3" />
                     </div>
                     <div class="input-group">
                         <label>Temporary Password</label>
-                        <input bind:value={newEmp.password} type="password" class="input-field" required />
+                        <input bind:value={newEmp.password} type="password" class="input-field" required minlength="6" />
                     </div>
                 </div>
 
