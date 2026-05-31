@@ -41,12 +41,32 @@ public interface ParcelRepository extends JpaRepository<Parcel, Integer> {
             @Param("statusNames") List<String> statusNames);
 
     @Query("SELECT new pl.polsl.tab.kurier.dto.RegionStatsDTO(r.name, COUNT(p)) " +
-           "FROM Parcel p JOIN p.destinationAddress a JOIN a.region r " +
+           "FROM Parcel p JOIN p.senderAddress a JOIN a.region r " +
+           "WHERE p.createdAt BETWEEN :startDate AND :endDate " +
+           "AND (:regionId IS NULL OR r.regionId = :regionId) " +
            "GROUP BY r.name ORDER BY COUNT(p) DESC")
-    List<RegionStatsDTO> countParcelsByDestinationRegion();
+    List<RegionStatsDTO> countParcelsBySourceRegion(
+            @Param("startDate") java.time.LocalDateTime startDate,
+            @Param("endDate") java.time.LocalDateTime endDate,
+            @Param("regionId") Integer regionId);
+
+    @Query("SELECT new pl.polsl.tab.kurier.dto.RegionStatsDTO(r.name, COUNT(p)) " +
+           "FROM Parcel p JOIN p.destinationAddress a JOIN a.region r " +
+           "WHERE p.createdAt BETWEEN :startDate AND :endDate " +
+           "AND (:regionId IS NULL OR r.regionId = :regionId) " +
+           "GROUP BY r.name ORDER BY COUNT(p) DESC")
+    List<RegionStatsDTO> countParcelsByDestinationRegion(
+            @Param("startDate") java.time.LocalDateTime startDate,
+            @Param("endDate") java.time.LocalDateTime endDate,
+            @Param("regionId") Integer regionId);
 
     @Query("SELECT new pl.polsl.tab.kurier.dto.DeliveryModeStatsDTO(m.name, COUNT(p)) " +
            "FROM Parcel p JOIN p.deliveryMode m " +
+           "WHERE p.createdAt BETWEEN :startDate AND :endDate " +
+           "AND (:regionId IS NULL OR p.destinationAddress.region.regionId = :regionId) " +
            "GROUP BY m.name ORDER BY COUNT(p) DESC")
-    List<DeliveryModeStatsDTO> countParcelsByDeliveryMode();
+    List<DeliveryModeStatsDTO> countParcelsByDeliveryMode(
+            @Param("startDate") java.time.LocalDateTime startDate,
+            @Param("endDate") java.time.LocalDateTime endDate,
+            @Param("regionId") Integer regionId);
 }

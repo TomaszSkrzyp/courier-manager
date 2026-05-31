@@ -30,8 +30,14 @@
         showDetails?: boolean;
     }
 
+    interface Region {
+        id: number;
+        name: string;
+    }
+
     let packages = $state<Package[]>([]);
     let statuses = $state<string[]>(["None", "Created", "Collected", "In Transit", "Out for Delivery", "Delivered", "Failed", "Lost", "Damaged"]);
+    let regions = $state<Region[]>([]);
     
     let activeTab = $state("manage"); // 'manage' or 'reports'
     let isLoadingData = $state(false);
@@ -133,6 +139,15 @@
         } catch (err) {
             console.error("Failed to fetch statuses", err);
         }
+
+        try {
+            const regionRes = await fetch("http://localhost:8080/api/regions");
+            if (regionRes.ok) {
+                regions = await regionRes.json();
+            }
+        } catch (err) {
+            console.error("Failed to fetch regions", err);
+        }
     });
 
     function handlePageChange(newPage: number) {
@@ -179,14 +194,33 @@
     let isGeneratingReport = $state(false);
     let reportReady = $state(false);
     let reportUrl = $state("");
+    let reportFilename = $state("parcels_report.pdf");
+    let startDate = $state(new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]);
+    let endDate = $state(new Date().toISOString().split('T')[0]);
+    let selectedRegionId = $state<number | null>(null);
 
     async function generateReport() {
         isGeneratingReport = true;
         reportReady = false;
         
         try {
-            const res = await fetch("http://localhost:8080/api/reports/parcels");
+            const start = `${startDate}T00:00:00`;
+            const end = `${endDate}T23:59:59`;
+            let url = `http://localhost:8080/api/reports/parcels?startDate=${start}&endDate=${end}`;
+            if (selectedRegionId) {
+                url += `&regionId=${selectedRegionId}`;
+            }
+            const res = await fetch(url);
             if (res.ok) {
+                // Try to get filename from header
+                const disposition = res.headers.get('Content-Disposition');
+                if (disposition && disposition.includes('filename=')) {
+                    const filenameMatch = disposition.match(/filename="?([^";]+)"?/);
+                    if (filenameMatch && filenameMatch[1]) {
+                        reportFilename = filenameMatch[1];
+                    }
+                }
+
                 const blob = await res.blob();
                 if (reportUrl) URL.revokeObjectURL(reportUrl);
                 reportUrl = URL.createObjectURL(blob);
@@ -436,45 +470,38 @@
                 </div>
             </div>
         {:else if activeTab === 'reports'}
-            <div class="glass-panel" in:fade={{duration: 200}}>
-                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 2rem;">
-                    <div>
-                        <h3>Generate System Report</h3>
-                        <p style="color: var(--text-secondary);">Compile a comprehensive PDF report of all parcel statuses and worker performance for the selected region.</p>
+            <div class="basic-panel" in:fade={{duration: 200}}>
+                <h3>Generate System Report</h3>
+                <p>Select date range and optional region filter.</p>
+                
+                <div class="basic-form" style="max-width: none; display: flex; gap: 1rem; align-items: flex-end; flex-wrap: wrap;">
+                    <div class="input-group" style="margin-bottom: 0; flex: 1; min-width: 150px;">
+                        <label for="startDate">From:</label>
+                        <input type="date" id="startDate" bind:value={startDate} class="input-field" />
                     </div>
-                    <button class="btn btn-primary" onclick={generateReport} disabled={isGeneratingReport}>
-                        {#if isGeneratingReport}
-                            Generating...
-                        {:else}
-                            Generate Report
-                        {/if}
+                    <div class="input-group" style="margin-bottom: 0; flex: 1; min-width: 150px;">
+                        <label for="endDate">To:</label>
+                        <input type="date" id="endDate" bind:value={endDate} class="input-field" />
+                    </div>
+                    <div class="input-group" style="margin-bottom: 0; flex: 1; min-width: 150px;">
+                        <label for="regionFilter">Region:</label>
+                        <select id="regionFilter" bind:value={selectedRegionId} class="input-field">
+                            <option value={null}>All Regions</option>
+                            {#each regions as r}
+                                <option value={r.id}>{r.name}</option>
+                            {/each}
+                        </select>
+                    </div>
+
+                    <button class="btn btn-primary" onclick={generateReport} disabled={isGeneratingReport} style="flex: 1; min-width: 150px; height: 42px;">
+                        {isGeneratingReport ? 'Generating...' : 'Generate Report'}
                     </button>
                 </div>
 
-                {#if isGeneratingReport}
-                    <div class="loading-state" style="padding: 2rem 0;">
-                        <div class="spinner"></div>
-                        <p>Compiling data...</p>
-                    </div>
-                {/if}
-
                 {#if reportReady}
-                    <div class="report-result animate-fade-in">
-                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--secondary)" stroke-width="2" style="margin-bottom: 1rem;">
-                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                            <polyline points="14 2 14 8 20 8"></polyline>
-                            <line x1="16" y1="13" x2="8" y2="13"></line>
-                            <line x1="16" y1="17" x2="8" y2="17"></line>
-                            <polyline points="10 9 9 9 8 9"></polyline>
-                        </svg>
-                        <h4>Report Generated Successfully</h4>
-                        <p style="color: var(--text-secondary); margin-bottom: 1.5rem;">The Daily Operations Report (Warsaw Region) is ready for download.</p>
-                        <a href={reportUrl} download="parcels_report.pdf" class="btn btn-outline" style="text-decoration: none; display: inline-flex; align-items: center; justify-content: center;">
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 0.5rem;">
-                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                                <polyline points="7 10 12 15 17 10"></polyline>
-                                <line x1="12" y1="15" x2="12" y2="3"></line>
-                            </svg>
+                    <div style="margin-top: 2rem; padding: 1.5rem; border: 1px solid var(--border-color); border-radius: 8px; text-align: center;">
+                        <p style="margin-bottom: 1rem;">Report is ready: <strong>{reportFilename}</strong></p>
+                        <a href={reportUrl} download={reportFilename} class="btn btn-outline">
                             Download PDF
                         </a>
                     </div>
@@ -529,15 +556,25 @@
     .filter-bar {
         display: flex;
         gap: 1rem;
-        padding: 1.5rem;
+        padding: 1rem;
         margin-bottom: 1.5rem;
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
     }
 
     .search-input {
-        background-image: url("data:image/svg+xml,%3Csvg width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='%2394A3B8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='11' cy='11' r='8'%3E%3C/circle%3E%3Cline x1='21' y1='21' x2='16.65' y2='16.65'%3E%3C/line%3E%3C/svg%3E");
-        background-repeat: no-repeat;
-        background-position: 1rem center;
-        padding-left: 3rem;
+        flex: 1;
+    }
+
+    .basic-panel {
+        padding: 1.5rem;
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+    }
+
+    .basic-form {
+        max-width: 400px;
+        margin-top: 1.5rem;
     }
 
     .table-responsive {

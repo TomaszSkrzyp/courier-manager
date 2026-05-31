@@ -10,7 +10,6 @@ import pl.polsl.tab.kurier.dto.EmployeeDTO;
 import pl.polsl.tab.kurier.dto.LoginRequestDTO;
 import pl.polsl.tab.kurier.service.EmployeeService;
 
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/employees")

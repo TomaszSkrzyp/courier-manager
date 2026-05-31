@@ -16,24 +16,32 @@ import pl.polsl.tab.kurier.dto.RegionStatsDTO;
 import pl.polsl.tab.kurier.dto.DeliveryModeStatsDTO;
 import pl.polsl.tab.kurier.dto.CourierStatsDTO;
 
+import pl.polsl.tab.kurier.repository.RegionRepository;
+import pl.polsl.tab.kurier.model.Region;
+
 import java.awt.Color;
 import java.io.ByteArrayOutputStream;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 public class ReportService {
 
     private final ParcelRepository parcelRepository;
     private final DeliveryUpdateRepository deliveryUpdateRepository;
+    private final RegionRepository regionRepository;
 
-    public ReportService(ParcelRepository parcelRepository, DeliveryUpdateRepository deliveryUpdateRepository) {
+    public ReportService(ParcelRepository parcelRepository, 
+                         DeliveryUpdateRepository deliveryUpdateRepository,
+                         RegionRepository regionRepository) {
         this.parcelRepository = parcelRepository;
         this.deliveryUpdateRepository = deliveryUpdateRepository;
+        this.regionRepository = regionRepository;
     }
 
-    public byte[] generateParcelReport() {
+    public byte[] generateParcelReport(LocalDateTime startDate, LocalDateTime endDate, Integer regionId) {
         try (ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
             Document document = new Document(PageSize.A4);
             PdfWriter.getInstance(document, baos);
@@ -45,26 +53,53 @@ public class ReportService {
             document.add(title);
 
             Font dateFont = FontFactory.getFont(FontFactory.HELVETICA, 10);
-            String formattedDate = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+            String formattedDate = LocalDateTime.now().format(formatter);
             Paragraph datePara = new Paragraph("Generated at: " + formattedDate, dateFont);
             datePara.setAlignment(Paragraph.ALIGN_RIGHT);
-            datePara.setSpacingAfter(20);
             document.add(datePara);
 
-            // 1. Parcels by Region
-            addSectionTitle(document, "Parcels by Destination Region");
-            List<RegionStatsDTO> regionStats = parcelRepository.countParcelsByDestinationRegion();
-            PdfPTable regionTable = createTable(new String[]{"Region Name", "Parcel Count"}, new float[]{3f, 1f});
+            Paragraph rangePara = new Paragraph(String.format("Report Period: %s to %s", 
+                startDate.format(DateTimeFormatter.ofPattern("yyyy-MM-dd")), 
+                endDate.format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))), dateFont);
+            rangePara.setAlignment(Paragraph.ALIGN_RIGHT);
+            
+            if (regionId != null) {
+                String regionName = regionRepository.findById(regionId)
+                        .map(Region::getName)
+                        .orElse("Unknown Region");
+                Paragraph regionPara = new Paragraph("Filtered by Region: " + regionName, dateFont);
+                regionPara.setAlignment(Paragraph.ALIGN_RIGHT);
+                document.add(regionPara);
+            }
+            
+            rangePara.setSpacingAfter(20);
+            document.add(rangePara);
+
+            // Parcels by Source Region
+            addSectionTitle(document, "Parcels by Source Region");
+            List<RegionStatsDTO> sourceRegionStats = parcelRepository.countParcelsBySourceRegion(startDate, endDate, regionId);
+            PdfPTable sourceRegionTable = createTable(new String[]{"Region Name", "Parcel Count"}, new float[]{3f, 1f});
             Font cellFont = FontFactory.getFont(FontFactory.HELVETICA, 10);
+            for (RegionStatsDTO stat : sourceRegionStats) {
+                sourceRegionTable.addCell(new Phrase(stat.getRegionName(), cellFont));
+                sourceRegionTable.addCell(new Phrase(String.valueOf(stat.getParcelCount()), cellFont));
+            }
+            document.add(sourceRegionTable);
+
+            // Parcels by Destination Region
+            addSectionTitle(document, "Parcels by Destination Region");
+            List<RegionStatsDTO> regionStats = parcelRepository.countParcelsByDestinationRegion(startDate, endDate, regionId);
+            PdfPTable regionTable = createTable(new String[]{"Region Name", "Parcel Count"}, new float[]{3f, 1f});
             for (RegionStatsDTO stat : regionStats) {
                 regionTable.addCell(new Phrase(stat.getRegionName(), cellFont));
                 regionTable.addCell(new Phrase(String.valueOf(stat.getParcelCount()), cellFont));
             }
             document.add(regionTable);
 
-            // 2. Parcels by Delivery Mode
+            // Parcels by Delivery Mode
             addSectionTitle(document, "Parcels by Delivery Mode");
-            List<DeliveryModeStatsDTO> modeStats = parcelRepository.countParcelsByDeliveryMode();
+            List<DeliveryModeStatsDTO> modeStats = parcelRepository.countParcelsByDeliveryMode(startDate, endDate, regionId);
             PdfPTable modeTable = createTable(new String[]{"Delivery Mode", "Parcel Count"}, new float[]{3f, 1f});
             for (DeliveryModeStatsDTO stat : modeStats) {
                 modeTable.addCell(new Phrase(stat.getModeName(), cellFont));
@@ -72,9 +107,9 @@ public class ReportService {
             }
             document.add(modeTable);
 
-            // 3. Delivered Parcels by Courier
+            // Delivered Parcels by Courier
             addSectionTitle(document, "Delivered Parcels by Courier");
-            List<CourierStatsDTO> courierStats = deliveryUpdateRepository.countDeliveredParcelsByCourier();
+            List<CourierStatsDTO> courierStats = deliveryUpdateRepository.countDeliveredParcelsByCourier(startDate, endDate, regionId);
             PdfPTable courierTable = createTable(new String[]{"First Name", "Last Name", "Delivered Count"}, new float[]{2f, 2f, 1f});
             for (CourierStatsDTO stat : courierStats) {
                 courierTable.addCell(new Phrase(stat.getFirstName(), cellFont));
@@ -83,9 +118,9 @@ public class ReportService {
             }
             document.add(courierTable);
 
-            // 4. Delivered Parcels by Region
+            // Delivered Parcels by Region
             addSectionTitle(document, "Delivered Parcels by Region");
-            List<RegionStatsDTO> deliveredRegionStats = deliveryUpdateRepository.countDeliveredParcelsByRegion();
+            List<RegionStatsDTO> deliveredRegionStats = deliveryUpdateRepository.countDeliveredParcelsByRegion(startDate, endDate, regionId);
             PdfPTable deliveredRegionTable = createTable(new String[]{"Region Name", "Delivered Count"}, new float[]{3f, 1f});
             for (RegionStatsDTO stat : deliveredRegionStats) {
                 deliveredRegionTable.addCell(new Phrase(stat.getRegionName(), cellFont));

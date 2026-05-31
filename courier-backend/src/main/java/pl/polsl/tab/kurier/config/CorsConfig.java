@@ -17,6 +17,7 @@ public class CorsConfig {
                         .allowedOriginPatterns("http://localhost:5173")
                         .allowedMethods("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS") // Added PATCH and OPTIONS
                         .allowedHeaders("*")
+                        .exposedHeaders("Content-Disposition")
                         .allowCredentials(true)
                         .maxAge(3600); // Cache the preflight response for 1 hour
             }

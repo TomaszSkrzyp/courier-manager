@@ -5,11 +5,9 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import pl.polsl.tab.kurier.dto.EmployeeDTO;
-import pl.polsl.tab.kurier.model.Address;
 import pl.polsl.tab.kurier.model.Employee;
 import pl.polsl.tab.kurier.model.Region;
 import pl.polsl.tab.kurier.model.Role;
-import pl.polsl.tab.kurier.repository.AddressRepository;
 import pl.polsl.tab.kurier.repository.EmployeeRepository;
 import pl.polsl.tab.kurier.repository.RoleRepository;
 
@@ -27,9 +25,6 @@ public class EmployeeService {
 
     @Autowired
     private RoleRepository roleRepository;
-    
-    @Autowired
-    private AddressRepository addressRepository;
 
     @Autowired
     private RegionService regionService;
