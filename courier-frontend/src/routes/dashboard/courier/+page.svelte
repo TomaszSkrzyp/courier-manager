@@ -27,6 +27,7 @@
 
     let assignedPackages = $state<Package[]>([]);
     let isLoading = $state(true);
+    let activeDropdownId = $state<number | null>(null);
 
     // Modal state for failed deliveries
     let showCommentModal = $state(false);
@@ -69,8 +70,13 @@
         }
     }
 
-    onMount(async () => {
-        await fetchParcels();
+    onMount(() => {
+        fetchParcels();
+        const handleGlobalClick = () => {
+            activeDropdownId = null;
+        };
+        window.addEventListener('click', handleGlobalClick);
+        return () => window.removeEventListener('click', handleGlobalClick);
     });
 
     async function handleSuccess(pkg: Package) {
@@ -331,17 +337,25 @@
                             {/if}
                             
                             <div class="dropdown">
-                                <button class="btn btn-outline issue-btn">
+                                <button 
+                                    class="btn btn-outline issue-btn" 
+                                    onclick={(e) => {
+                                        e.stopPropagation();
+                                        activeDropdownId = activeDropdownId === pkg.id ? null : pkg.id;
+                                    }}
+                                >
                                     Report Issue
                                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                         <polyline points="6 9 12 15 18 9"></polyline>
                                     </svg>
                                 </button>
-                                <div class="dropdown-content">
-                                    <button onclick={() => openIssueModal(pkg, 'UNDELIVERED')}>Recipient absent</button>
-                                    <button onclick={() => openIssueModal(pkg, 'DAMAGED')}>Package damaged</button>
-                                    <button onclick={() => openIssueModal(pkg, 'LOST')}>Lost in transit</button>
-                                </div>
+                                {#if activeDropdownId === pkg.id}
+                                    <div class="dropdown-content show">
+                                        <button onclick={() => { openIssueModal(pkg, 'UNDELIVERED'); activeDropdownId = null; }}>Recipient absent</button>
+                                        <button onclick={() => { openIssueModal(pkg, 'DAMAGED'); activeDropdownId = null; }}>Package damaged</button>
+                                        <button onclick={() => { openIssueModal(pkg, 'LOST'); activeDropdownId = null; }}>Lost in transit</button>
+                                    </div>
+                                {/if}
                             </div>
                         </div>
                     {/if}
@@ -609,7 +623,7 @@
         overflow: hidden;
     }
 
-    .dropdown:hover .dropdown-content {
+    .dropdown-content.show {
         display: block;
         animation: fadeIn 0.2s;
     }
