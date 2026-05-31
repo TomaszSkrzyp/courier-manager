@@ -6,4 +6,5 @@ import pl.polsl.tab.kurier.model.Address;
 
 @Repository
 public interface AddressRepository extends JpaRepository<Address, Integer> {
+    long countByRegionRegionId(Integer regionId);
 }

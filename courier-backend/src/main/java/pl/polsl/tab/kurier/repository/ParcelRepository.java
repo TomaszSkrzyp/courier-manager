@@ -18,6 +18,9 @@ import java.util.Set;
 public interface ParcelRepository extends JpaRepository<Parcel, Integer> {
     Optional<Parcel> findByTrackingNumber(String trackingNumber);
 
+    long countByCurrentRegionRegionId(Integer regionId);
+    long countByNextRegionRegionId(Integer regionId);
+
     @Query("SELECT p FROM Parcel p " +
            "LEFT JOIN p.destinationAddress addr " +
            "LEFT JOIN addr.region reg " +
