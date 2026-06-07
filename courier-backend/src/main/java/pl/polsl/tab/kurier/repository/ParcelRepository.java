@@ -25,7 +25,10 @@ public interface ParcelRepository extends JpaRepository<Parcel, Integer> {
            "LEFT JOIN p.destinationAddress addr " +
            "LEFT JOIN addr.region reg " +
            "WHERE (:status = 'All' OR LOWER(p.status.name) = LOWER(:status)) " +
-           "AND (:search IS NULL OR LOWER(p.trackingNumber) LIKE :search OR LOWER(reg.name) LIKE :search)")
+           "AND (:search IS NULL OR LOWER(p.trackingNumber) LIKE :search OR LOWER(reg.name) LIKE :search) " +
+           "ORDER BY CASE WHEN p.status.name = 'DELIVERED' THEN 2 ELSE 1 END, " +
+           "CASE WHEN p.deliveryMode.name = 'EXPRESS' THEN 1 ELSE 2 END, " +
+           "p.createdAt DESC")
     Page<Parcel> searchParcels(@Param("search") String search, @Param("status") String status, Pageable pageable);
 
     /**

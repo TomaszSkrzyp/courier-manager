@@ -116,11 +116,7 @@
                     comment: p.comment || "",
                     currentRegion: p.currentRegion || "N/A",
                     showDetails: false
-                })).sort((a: any, b: any) => {
-                    if (a.deliveryMode === 'EXPRESS' && b.deliveryMode !== 'EXPRESS') return -1;
-                    if (a.deliveryMode !== 'EXPRESS' && b.deliveryMode === 'EXPRESS') return 1;
-                    return 0;
-                });
+                }));
             } else {
                 errorMessage = `Server error: ${res.status} ${res.statusText}`;
             }
