@@ -101,14 +101,31 @@ public class ParcelService {
                 .collect(Collectors.toSet());
 
         List<String> actionableStatuses = List.of(
-                ParcelStatus.PENDING_PICKUP,
-                ParcelStatus.AT_HUB,
+                ParcelStatus.REGISTERED, // New: pickup from sender
+                ParcelStatus.PENDING_PICKUP, // Ready after worker acceptance at hub
                 ParcelStatus.IN_TRANSIT,
                 ParcelStatus.OUT_FOR_DELIVERY
         );
 
-        return parcelRepository.findByNextRegionIdsAndStatusNames(regionIds, actionableStatuses)
-                .stream()
+        // Fetch parcels where nextRegion is one of the courier's assigned regions
+        List<Parcel> potentialParcels = parcelRepository.findByNextRegionIdsAndStatusNames(regionIds, actionableStatuses);
+        
+        List<Parcel> filtered = potentialParcels.stream().filter(p -> {
+            Integer currId = p.getCurrentRegion().getRegionId();
+            Integer nextId = p.getNextRegion().getRegionId();
+            
+            if (regionIds.size() == 1) {
+                // Local Courier: handles only parcels within their single region (Sender->Hub or Hub->Recipient)
+                // This matches when currentRegion == nextRegion
+                return currId.equals(nextId) && regionIds.contains(currId);
+            } else {
+                // Linehaul Courier: handles only parcels moving between two of their assigned regions (Hub->Hub)
+                // This matches when currentRegion != nextRegion AND both are in their region set
+                return !currId.equals(nextId) && regionIds.contains(currId) && regionIds.contains(nextId);
+            }
+        }).collect(Collectors.toList());
+
+        return filtered.stream()
                 .map(ParcelDTO::fromEntity)
                 .collect(Collectors.toList());
     }
@@ -248,9 +265,12 @@ public class ParcelService {
             Region destinationRegion = parcel.getDestinationAddress().getRegion();
 
             Status newStatus;
-            // It becomes OUT_FOR_DELIVERY only if it's being picked up
-            // FROM its final destination hub or directly from sender in the same region.
-            if (currentRegion.getRegionId().equals(destinationRegion.getRegionId())) {
+            // If from sender (REGISTERED), always go to Hub first via IN_TRANSIT
+            if (ParcelStatus.REGISTERED.equals(parcel.getStatus().getName())) {
+                newStatus = resolveOrCreateStatus(ParcelStatus.IN_TRANSIT);
+            } 
+            // If from Hub (PENDING_PICKUP), decide if local delivery or next hub
+            else if (currentRegion.getRegionId().equals(destinationRegion.getRegionId())) {
                 newStatus = resolveOrCreateStatus(ParcelStatus.OUT_FOR_DELIVERY);
             } else {
                 newStatus = resolveOrCreateStatus(ParcelStatus.IN_TRANSIT);
@@ -275,15 +295,17 @@ public class ParcelService {
             // The parcel is now physically at the hub it was traveling to
             parcel.setCurrentRegion(arrivedAtHub);
             
+            // Clear verification so a worker must accept it at this hub
+            parcel.setVerified(false);
             Status newStatus = resolveOrCreateStatus(ParcelStatus.AT_HUB);
 
             if (!arrivedAtHub.getRegionId().equals(destinationRegion.getRegionId())) {
                 // Arrived at intermediate hub — compute next hop
                 Integer newNextRegionId = routeService.findNextRegionId(
                         arrivedAtHub.getRegionId(), destinationRegion.getRegionId()
-                ).orElseThrow(() -> new RuntimeException(
-                        "Route broken: no path from hub " + arrivedAtHub.getRegionId() + " (" + arrivedAtHub.getName() + ")"
-                        + " to destination " + destinationRegion.getRegionId() + " (" + destinationRegion.getName() + ")"
+                ).orElseThrow(() -> new pl.polsl.tab.kurier.exception.ResourceBusyException(
+                        "Route broken: no path from hub " + arrivedAtHub.getName()
+                        + " to destination " + destinationRegion.getName()
                 ));
 
                 Region newNextRegion = regionRepository.findById(newNextRegionId)
@@ -306,10 +328,15 @@ public class ParcelService {
      */
     public Optional<ParcelDTO> verifyParcel(Integer id, boolean verified) {
         return parcelRepository.findById(id).map(parcel -> {
-            parcel.setVerified(verified);
-            if (verified) {
-                parcel.setStatus(resolveOrCreateStatus(ParcelStatus.PENDING_PICKUP));
+            if (parcel.getVerified() != null && parcel.getVerified()) {
+                throw new pl.polsl.tab.kurier.exception.ResourceBusyException("Parcel is already verified.");
             }
+            if (!verified) {
+                throw new pl.polsl.tab.kurier.exception.ResourceBusyException("Parcels cannot be unverified.");
+            }
+            
+            parcel.setVerified(true);
+            parcel.setStatus(resolveOrCreateStatus(ParcelStatus.PENDING_PICKUP));
             return ParcelDTO.fromEntity(parcelRepository.save(parcel));
         });
     }

@@ -28,6 +28,7 @@
     let assignedPackages = $state<Package[]>([]);
     let isLoading = $state(true);
     let activeDropdownId = $state<number | null>(null);
+    let errorMessage = $state(""); // Global error for the dashboard
 
     // Modal state for failed deliveries
     let showCommentModal = $state(false);
@@ -80,6 +81,7 @@
     });
 
     async function handleSuccess(pkg: Package) {
+        errorMessage = "";
         try {
             const res = await fetch(`http://localhost:8080/api/parcels/${pkg.id}/status`, {
                 method: "PATCH",
@@ -88,13 +90,18 @@
             });
             if (res.ok) {
                 assignedPackages = assignedPackages.map(p => p.id === pkg.id ? { ...p, status: 'DELIVERED' } : p);
+            } else {
+                const errorData = await res.json();
+                errorMessage = errorData.message || "Failed to mark as delivered.";
             }
         } catch (e) {
             console.error("Failed to mark as delivered", e);
+            errorMessage = "Connection error.";
         }
     }
 
     async function handlePickup(pkg: Package) {
+        errorMessage = "";
         try {
             const res = await fetch(`http://localhost:8080/api/parcels/${pkg.id}/pickup`, {
                 method: "PATCH",
@@ -103,13 +110,18 @@
             });
             if (res.ok) {
                 await fetchParcels();
+            } else {
+                const errorData = await res.json();
+                errorMessage = errorData.message || "Failed to pick up package.";
             }
         } catch (e) {
             console.error("Failed to pick up package", e);
+            errorMessage = "Connection error.";
         }
     }
 
     async function handleAdvance(pkg: Package) {
+        errorMessage = "";
         try {
             const res = await fetch(`http://localhost:8080/api/parcels/${pkg.id}/advance`, {
                 method: "PATCH",
@@ -118,9 +130,13 @@
             });
             if (res.ok) {
                 await fetchParcels();
+            } else {
+                const errorData = await res.json();
+                errorMessage = errorData.message || "Failed to advance package.";
             }
         } catch (e) {
             console.error("Failed to advance package", e);
+            errorMessage = "Connection error.";
         }
     }
 
@@ -186,6 +202,25 @@
             {new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })}
         </div>
     </div>
+
+    {#if errorMessage}
+        <div class="glass-panel error-message animate-slide-down" transition:slide style="margin-bottom: 2rem;">
+            <div style="display: flex; align-items: center; gap: 0.75rem;">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--danger)" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="12" y1="8" x2="12" y2="12"></line>
+                    <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                </svg>
+                <span style="color: var(--text-primary); font-weight: 500;">{errorMessage}</span>
+            </div>
+            <button class="btn-action" style="color: var(--text-tertiary); background: transparent; border: none; cursor: pointer;" onclick={() => errorMessage = ""}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </button>
+        </div>
+    {/if}
 
     {#if isLoading}
         <div class="loading-state">
@@ -316,9 +351,9 @@
                         </div>
                     </div>
 
-                    {#if ['OUT_FOR_DELIVERY', 'PENDING_PICKUP', 'IN_TRANSIT', 'AT_HUB'].includes(pkg.status)}
+                    {#if ['OUT_FOR_DELIVERY', 'PENDING_PICKUP', 'IN_TRANSIT', 'AT_HUB', 'REGISTERED'].includes(pkg.status)}
                         <div class="action-bar">
-                            {#if pkg.status === 'PENDING_PICKUP'}
+                            {#if pkg.status === 'PENDING_PICKUP' || pkg.status === 'REGISTERED'}
                                 <button class="btn btn-primary" onclick={() => handlePickup(pkg)}>
                                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                         <path d="M21 8l-2-2H5L3 8v10a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V8z"></path>

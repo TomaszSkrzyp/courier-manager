@@ -375,21 +375,24 @@
                                                 <button 
                                                     class="toggle-btn" 
                                                     class:active={pkg.verified}
+                                                    disabled={pkg.status !== 'AT_HUB' && !pkg.verified}
+                                                    style="opacity: {pkg.status !== 'AT_HUB' && !pkg.verified ? 0.4 : 1}; cursor: {pkg.status !== 'AT_HUB' && !pkg.verified ? 'not-allowed' : 'pointer'}"
                                                     onclick={() => toggleVerified(pkg)}
+                                                    title={pkg.status === 'AT_HUB' ? 'Verify parcel arrival at hub' : 'Only parcels at hub can be verified'}
                                                 >
                                                     <div class="toggle-knob"></div>
                                                 </button>
                                             </td>
                                             <td>
-                                                <select 
-                                                    class="action-select" 
-                                                    value={pkg.status}
-                                                    onchange={(e) => changeStatus(pkg, e.currentTarget.value as Status)}
-                                                >
-                                                    {#each statuses as s}
-                                                        <option value={s}>{s}</option>
-                                                    {/each}
-                                                </select>
+                                                <div style="font-size: 0.8rem; color: var(--text-tertiary);">
+                                                    {#if pkg.status === 'AT_HUB'}
+                                                        Await Verification
+                                                    {:else if pkg.status === 'REGISTERED'}
+                                                        Await Pickup
+                                                    {:else}
+                                                        In Process
+                                                    {/if}
+                                                </div>
                                             </td>
                                         </tr>
                                         {#if pkg.showDetails}

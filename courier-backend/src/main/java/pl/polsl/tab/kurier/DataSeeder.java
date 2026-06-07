@@ -64,7 +64,24 @@ public class DataSeeder implements CommandLineRunner {
         seedDeliveryModes();
         seedPriceDelta();
         seedAdminUser();
+        seedWorkerUser(); // New: seed worker
         seedCourierAndParcel();
+    }
+
+    private void seedWorkerUser() {
+        if (employeeRepository.findByLogin("worker1").isEmpty()) {
+            Role workerRole = roleRepository.findByName("WORKER")
+                    .orElseThrow(() -> new RuntimeException("WORKER role not found"));
+
+            Employee worker = new Employee();
+            worker.setFirstName("Emma");
+            worker.setLastName("Worker");
+            worker.setLogin("worker1");
+            worker.setPassword("admin");
+            worker.setPesel("55555555555");
+            worker.setRole(workerRole);
+            employeeRepository.save(worker);
+        }
     }
 
     private void seedRoles() {
@@ -146,7 +163,7 @@ public class DataSeeder implements CommandLineRunner {
     }
 
     private void seedCourierAndParcel() {
-        if (employeeRepository.findByLogin("courier1").isEmpty()) {
+        if (employeeRepository.findByLogin("courier_kato").isEmpty()) {
             Role courierRole = roleRepository.findByName("COURIER")
                     .orElseThrow(() -> new RuntimeException("COURIER role not found"));
 
@@ -157,96 +174,72 @@ public class DataSeeder implements CommandLineRunner {
             pl.polsl.tab.kurier.model.Region warszawa = regionRepository.findByName("WARSZAWA")
                     .orElseThrow(() -> new RuntimeException("WARSZAWA region not found"));
 
-            Employee courier = new Employee();
-            courier.setFirstName("John");
-            courier.setLastName("Doe");
-            courier.setLogin("courier1");
-            courier.setPassword("admin");
-            courier.setPesel("12345678901");
-            courier.setRole(courierRole);
-            courier.setRegions(Set.of(katowice, radom));
-            employeeRepository.save(courier);
+            // Local Couriers
+            createCourier("courier_kato", "Kato", "Local", "10000000001", courierRole, Set.of(katowice));
+            createCourier("courier_radom", "Radom", "Local", "10000000002", courierRole, Set.of(radom));
+            createCourier("courier_waw", "Waw", "Local", "10000000003", courierRole, Set.of(warszawa));
 
-            // Add a second courier to bridge the gap between RADOM and WARSZAWA
-            Employee courier2 = new Employee();
-            courier2.setFirstName("Jane");
-            courier2.setLastName("Smith");
-            courier2.setLogin("courier2");
-            courier2.setPassword("admin");
-            courier2.setPesel("09876543210");
-            courier2.setRole(courierRole);
-            courier2.setRegions(Set.of(radom, warszawa));
-            employeeRepository.save(courier2);
+            // Linehaul Couriers
+            createCourier("linehaul_kato_radom", "KatoRadom", "Linehaul", "20000000001", courierRole, Set.of(katowice, radom));
+            createCourier("linehaul_radom_waw", "RadomWaw", "Linehaul", "20000000002", courierRole, Set.of(radom, warszawa));
 
             if (parcelRepository.count() == 0) {
                 DeliveryMode normal = deliveryModeRepository.findByName("NORMAL").get();
-                Status pendingPickup = statusRepository.findByName(ParcelStatus.PENDING_PICKUP).get();
+                Status registered = statusRepository.findByName(ParcelStatus.REGISTERED).get();
 
-                Address senderAddr = new Address();
-                senderAddr.setRegion(katowice);
-                senderAddr.setStreet("Korfantego");
-                senderAddr.setBuildingNumber("10");
-                senderAddr.setPostalCode("40-001");
-                addressRepository.save(senderAddr);
+                // Parcel 1: KATOWICE -> WARSZAWA (Multi-hop)
+                Address senderAddr = createAddress(katowice, "Korfantego", "10", "40-001");
+                Address recipientAddr = createAddress(warszawa, "Marszałkowska", "50", "00-001");
+                createParcel("555 123 456", BigDecimal.valueOf(5.0), normal, senderAddr, recipientAddr, katowice, katowice, registered);
 
-                Address recipientAddr = new Address();
-                recipientAddr.setRegion(warszawa);
-                recipientAddr.setStreet("Marszałkowska");
-                recipientAddr.setBuildingNumber("50");
-                recipientAddr.setPostalCode("00-001");
-                addressRepository.save(recipientAddr);
+                // Parcel 2: KATOWICE -> RADOM (Single linehaul hop)
+                Address senderAddr2 = createAddress(katowice, "Chorzowska", "5", "40-101");
+                Address recipientAddr2 = createAddress(radom, "Żeromskiego", "12", "26-600");
+                createParcel("555 987 654", BigDecimal.valueOf(2.0), normal, senderAddr2, recipientAddr2, katowice, katowice, registered);
 
-                Parcel parcel = new Parcel();
-                parcel.setPhoneNumber("555 123 456");
-                parcel.setWeight(BigDecimal.valueOf(5.0));
-                parcel.setExpectedTime(LocalDateTime.now().plusDays(2));
-                parcel.setDeliveryMode(normal);
-                parcel.setSenderAddress(senderAddr);
-                parcel.setDestinationAddress(recipientAddr);
-                parcel.setCurrentRegion(katowice);
-                parcel.setNextRegion(katowice); // Parcel is in Katowice, waiting for pickup
-                parcel.setStatus(pendingPickup);
-                parcel.setVerified(true);
-                parcel.setFragility("no");
-                parcel.setLength(BigDecimal.valueOf(30.0));
-                parcel.setWidth(BigDecimal.valueOf(20.0));
-                parcel.setHeight(BigDecimal.valueOf(15.0));
-                parcel.setPrice(BigDecimal.valueOf(25.0));
-                parcelRepository.save(parcel);
-
-                // Add a second parcel that only needs one courier (KATOWICE to RADOM)
-                Address senderAddr2 = new Address();
-                senderAddr2.setRegion(katowice);
-                senderAddr2.setStreet("Chorzowska");
-                senderAddr2.setBuildingNumber("5");
-                senderAddr2.setPostalCode("40-101");
-                addressRepository.save(senderAddr2);
-
-                Address recipientAddr2 = new Address();
-                recipientAddr2.setRegion(radom);
-                recipientAddr2.setStreet("Żeromskiego");
-                recipientAddr2.setBuildingNumber("12");
-                recipientAddr2.setPostalCode("26-600");
-                addressRepository.save(recipientAddr2);
-
-                Parcel parcel2 = new Parcel();
-                parcel2.setPhoneNumber("555 987 654");
-                parcel2.setWeight(BigDecimal.valueOf(2.0));
-                parcel2.setLength(BigDecimal.valueOf(10.0));
-                parcel2.setWidth(BigDecimal.valueOf(10.0));
-                parcel2.setHeight(BigDecimal.valueOf(5.0));
-                parcel2.setExpectedTime(LocalDateTime.now().plusDays(1));
-                parcel2.setDeliveryMode(normal);
-                parcel2.setSenderAddress(senderAddr2);
-                parcel2.setDestinationAddress(recipientAddr2);
-                parcel2.setCurrentRegion(katowice);
-                parcel2.setNextRegion(katowice);
-                parcel2.setStatus(pendingPickup);
-                parcel2.setVerified(true);
-                parcel2.setFragility("no");
-                parcel2.setPrice(BigDecimal.valueOf(15.0));
-                parcelRepository.save(parcel2);
+                // Parcel 3: KATOWICE -> KATOWICE (Pure local)
+                Address senderAddr3 = createAddress(katowice, "Ligonia", "7", "40-036");
+                Address recipientAddr3 = createAddress(katowice, "Mickiewicza", "15", "40-092");
+                createParcel("555 111 222", BigDecimal.valueOf(1.0), normal, senderAddr3, recipientAddr3, katowice, katowice, registered);
             }
         }
+    }
+
+    private void createCourier(String login, String first, String last, String pesel, Role role, Set<pl.polsl.tab.kurier.model.Region> regions) {
+        Employee courier = new Employee();
+        courier.setFirstName(first);
+        courier.setLastName(last);
+        courier.setLogin(login);
+        courier.setPassword("admin");
+        courier.setPesel(pesel);
+        courier.setRole(role);
+        courier.setRegions(regions);
+        employeeRepository.save(courier);
+    }
+
+    private Address createAddress(pl.polsl.tab.kurier.model.Region region, String street, String num, String zip) {
+        Address addr = new Address();
+        addr.setRegion(region);
+        addr.setStreet(street);
+        addr.setBuildingNumber(num);
+        addr.setPostalCode(zip);
+        return addressRepository.save(addr);
+    }
+
+    private void createParcel(String phone, BigDecimal weight, DeliveryMode mode, Address sender, Address recipient, pl.polsl.tab.kurier.model.Region curr, pl.polsl.tab.kurier.model.Region next, Status status) {
+        Parcel p = new Parcel();
+        p.setPhoneNumber(phone);
+        p.setWeight(weight);
+        p.setExpectedTime(LocalDateTime.now().plusDays(2));
+        p.setDeliveryMode(mode);
+        p.setSenderAddress(sender);
+        p.setDestinationAddress(recipient);
+        p.setCurrentRegion(curr);
+        p.setNextRegion(next);
+        p.setStatus(status);
+        p.setVerified(false); // Force verification flow
+        p.setFragility("no");
+        p.setPrice(BigDecimal.valueOf(20.0));
+        parcelRepository.save(p);
     }
 }
