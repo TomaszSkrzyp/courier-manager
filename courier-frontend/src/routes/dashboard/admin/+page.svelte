@@ -723,7 +723,7 @@
                         <input bind:value={newEmp.login} type="text" class="input-field" required minlength="3" />
                     </div>
                     <div class="input-group">
-                        <label>Temporary Password</label>
+                        <label>Password</label>
                         <input bind:value={newEmp.password} type="password" class="input-field" required minlength="6" />
                     </div>
                 </div>
