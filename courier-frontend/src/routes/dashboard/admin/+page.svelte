@@ -32,6 +32,11 @@
 
     let errorMessage = $state("");
 
+    $effect(() => {
+        activeTab;
+        errorMessage = "";
+    });
+
     async function fetchEmployees(page = 0) {
         isLoadingData = true;
         errorMessage = "";
@@ -84,6 +89,7 @@
 
     async function handleDeleteRegion(id: number) {
         if(confirm("Are you sure you want to remove this region? This may affect assigned couriers.")) {
+            errorMessage = "";
             try {
                 const res = await fetch(`http://localhost:8080/api/regions/${id}`, {
                     method: "DELETE"
@@ -91,9 +97,25 @@
                 if (res.ok) {
                     regions = regions.filter(r => r.id !== id);
                     fetchEmployees(currentPage);
+                } else {
+                    try {
+                        const errorData = await res.json();
+                        console.log("Full error data:", errorData);
+                        // Exhaustive check for any message field
+                        errorMessage = errorData.message || errorData.error || errorData.detail || errorData.title || JSON.stringify(errorData);
+                        
+                        // If we still have just "Bad Request" or similar generic text, and it's 400
+                        if (errorMessage === "Bad Request" && res.status === 400) {
+                            errorMessage = "Region is in use (cannot delete due to active parcels or couriers).";
+                        }
+                    } catch (e) {
+                        console.error("Error parsing response", e);
+                        errorMessage = `Error ${res.status}: ${res.statusText}`;
+                    }
                 }
             } catch (e) {
                 console.error("Failed to delete region", e);
+                errorMessage = "Connection error.";
             }
         }
     }
@@ -363,6 +385,25 @@
     </div>
 
     <div class="tab-content-wrapper">
+        {#if errorMessage}
+            <div class="glass-panel error-message animate-slide-down" transition:slide>
+                <div style="display: flex; align-items: center; gap: 0.75rem;">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--danger)" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <line x1="12" y1="8" x2="12" y2="12"></line>
+                        <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                    </svg>
+                    <span style="color: var(--text-primary); font-weight: 500;">{errorMessage}</span>
+                </div>
+                <button class="btn-action" style="color: var(--text-tertiary);" onclick={() => errorMessage = ""}>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
+            </div>
+        {/if}
+
         {#if activeTab === 'staff'}
             <div in:fade={{duration: 200}}>
                 <div class="stats-grid">
@@ -1162,6 +1203,17 @@
         border-top-color: var(--primary);
         animation: spin 1s ease-in-out infinite;
         margin: 0 auto 1rem auto;
+    }
+
+    .error-message {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1rem 1.5rem;
+        background: rgba(239, 68, 68, 0.05);
+        border: 1px solid rgba(239, 68, 68, 0.2);
+        border-radius: var(--radius-lg);
+        margin-bottom: 2rem;
     }
 
     @keyframes spin {

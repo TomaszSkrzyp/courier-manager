@@ -8,6 +8,8 @@ import pl.polsl.tab.kurier.model.Region;
 import pl.polsl.tab.kurier.repository.AddressRepository;
 import pl.polsl.tab.kurier.repository.ParcelRepository;
 import pl.polsl.tab.kurier.repository.RegionRepository;
+import pl.polsl.tab.kurier.repository.EmployeeRepository;
+import pl.polsl.tab.kurier.repository.DeliveryUpdateRepository;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -23,6 +25,12 @@ public class RegionService {
 
     @Autowired
     private ParcelRepository parcelRepository;
+
+    @Autowired
+    private EmployeeRepository employeeRepository;
+
+    @Autowired
+    private DeliveryUpdateRepository deliveryUpdateRepository;
 
     public List<RegionDTO> getAllRegions() {
         return regionRepository.findAll().stream()
@@ -56,11 +64,19 @@ public class RegionService {
     }
 
     public void deleteRegion(Integer id) {
+        String errorMessage = "Region is in use (cannot delete due to active parcels or couriers).";
+        
         if (addressRepository.countByRegionRegionId(id) > 0) {
-            throw new ResourceBusyException("Cannot delete region: it is associated with existing addresses.");
+            throw new ResourceBusyException(errorMessage);
         }
         if (parcelRepository.countByCurrentRegionRegionId(id) > 0 || parcelRepository.countByNextRegionRegionId(id) > 0) {
-            throw new ResourceBusyException("Cannot delete region: it is associated with active parcels.");
+            throw new ResourceBusyException(errorMessage);
+        }
+        if (employeeRepository.countByRegionsRegionId(id) > 0) {
+            throw new ResourceBusyException(errorMessage);
+        }
+        if (deliveryUpdateRepository.countByRegionRegionId(id) > 0) {
+            throw new ResourceBusyException(errorMessage);
         }
         
         regionRepository.deleteById(id);

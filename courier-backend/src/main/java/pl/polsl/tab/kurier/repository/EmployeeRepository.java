@@ -19,4 +19,6 @@ public interface EmployeeRepository extends JpaRepository<Employee, Integer> {
 
     /** Fetches all employees with the given role name. */
     List<Employee> findByRole_Name(String roleName);
+
+    long countByRegionsRegionId(Integer regionId);
 }

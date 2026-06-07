@@ -33,4 +33,6 @@ public interface DeliveryUpdateRepository extends JpaRepository<DeliveryUpdate, 
             @Param("startDate") LocalDateTime startDate,
             @Param("endDate") LocalDateTime endDate,
             @Param("regionId") Integer regionId);
+
+    long countByRegionRegionId(Integer regionId);
 }
