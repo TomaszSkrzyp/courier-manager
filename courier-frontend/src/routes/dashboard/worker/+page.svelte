@@ -51,6 +51,11 @@
 
     let errorMessage = $state("");
 
+    $effect(() => {
+        activeTab;
+        errorMessage = "";
+    });
+
     async function fetchPackages(page = 0) {
         isLoadingData = true;
         errorMessage = "";
@@ -197,9 +202,18 @@
     let reportFilename = $state("parcels_report.pdf");
     let startDate = $state(new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]);
     let endDate = $state(new Date().toISOString().split('T')[0]);
+    let today = new Date().toISOString().split('T')[0];
     let selectedRegionId = $state<number | null>(null);
 
     async function generateReport() {
+        if (startDate > today || endDate > today) {
+            errorMessage = "Cannot generate report for future dates.";
+            return;
+        }
+        if (startDate > endDate) {
+            errorMessage = "Start date cannot be later than end date.";
+            return;
+        }
         isGeneratingReport = true;
         reportReady = false;
         
@@ -254,6 +268,25 @@
     </div>
 
     <div class="tab-content-wrapper">
+        {#if errorMessage}
+            <div class="glass-panel error-message animate-slide-down" transition:slide>
+                <div style="display: flex; align-items: center; gap: 0.75rem;">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--danger)" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <line x1="12" y1="8" x2="12" y2="12"></line>
+                        <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                    </svg>
+                    <span style="color: var(--text-primary); font-weight: 500;">{errorMessage}</span>
+                </div>
+                <button class="btn-action" style="color: var(--text-tertiary); background: transparent; border: none; cursor: pointer;" onclick={() => errorMessage = ""}>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
+            </div>
+        {/if}
+
         {#if activeTab === 'manage'}
             <div in:fade={{duration: 200}}>
                 <div class="glass-panel filter-bar">
@@ -477,11 +510,11 @@
                 <div class="basic-form" style="max-width: none; display: flex; gap: 1rem; align-items: flex-end; flex-wrap: wrap;">
                     <div class="input-group" style="margin-bottom: 0; flex: 1; min-width: 150px;">
                         <label for="startDate">From:</label>
-                        <input type="date" id="startDate" bind:value={startDate} class="input-field" />
+                        <input type="date" id="startDate" bind:value={startDate} max={today} class="input-field" />
                     </div>
                     <div class="input-group" style="margin-bottom: 0; flex: 1; min-width: 150px;">
                         <label for="endDate">To:</label>
-                        <input type="date" id="endDate" bind:value={endDate} class="input-field" />
+                        <input type="date" id="endDate" bind:value={endDate} max={today} class="input-field" />
                     </div>
                     <div class="input-group" style="margin-bottom: 0; flex: 1; min-width: 150px;">
                         <label for="regionFilter">Region:</label>
@@ -752,6 +785,17 @@
         padding: 3rem;
         text-align: center;
         background: rgba(16, 185, 129, 0.05);
+    }
+
+    .error-message {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1rem 1.5rem;
+        background: rgba(239, 68, 68, 0.05);
+        border: 1px solid rgba(239, 68, 68, 0.2);
+        border-radius: var(--radius-lg);
+        margin-bottom: 2rem;
     }
 
     .spinner {

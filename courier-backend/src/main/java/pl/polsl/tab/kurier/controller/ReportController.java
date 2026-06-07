@@ -32,6 +32,14 @@ public class ReportController {
             @RequestParam("startDate") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDate,
             @RequestParam("endDate") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDate,
             @RequestParam(value = "regionId", required = false) Integer regionId) {
+        
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime endOfToday = now.toLocalDate().atTime(23, 59, 59);
+        
+        if (startDate.isAfter(endOfToday) || endDate.isAfter(endOfToday) || startDate.isAfter(endDate)) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
+        }
+
         try {
             byte[] pdfBytes = reportService.generateParcelReport(startDate, endDate, regionId);
 

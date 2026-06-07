@@ -48,57 +48,53 @@ public class ReportService {
             document.open();
 
             Font titleFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 18);
-            Paragraph title = new Paragraph("Detailed Statistics Report", titleFont);
+            Paragraph title = new Paragraph("Statistics Report", titleFont);
             title.setAlignment(Paragraph.ALIGN_CENTER);
+            title.setSpacingAfter(10);
             document.add(title);
 
             Font dateFont = FontFactory.getFont(FontFactory.HELVETICA, 10);
             DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
             String formattedDate = LocalDateTime.now().format(formatter);
-            Paragraph datePara = new Paragraph("Generated at: " + formattedDate, dateFont);
-            datePara.setAlignment(Paragraph.ALIGN_RIGHT);
-            document.add(datePara);
+            Paragraph genDate = new Paragraph("Generated at: " + formattedDate, dateFont);
+            genDate.setAlignment(Paragraph.ALIGN_RIGHT);
+            document.add(genDate);
 
             Paragraph rangePara = new Paragraph(String.format("Report Period: %s to %s", 
                 startDate.format(DateTimeFormatter.ofPattern("yyyy-MM-dd")), 
                 endDate.format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))), dateFont);
             rangePara.setAlignment(Paragraph.ALIGN_RIGHT);
-            
+            rangePara.setSpacingAfter(20);
+            document.add(rangePara);
+
             if (regionId != null) {
                 String regionName = regionRepository.findById(regionId)
                         .map(Region::getName)
                         .orElse("Unknown Region");
-                Paragraph regionPara = new Paragraph("Filtered by Region: " + regionName, dateFont);
-                regionPara.setAlignment(Paragraph.ALIGN_RIGHT);
-                document.add(regionPara);
-            }
-            
-            rangePara.setSpacingAfter(20);
-            document.add(rangePara);
+                
+                Font subTitleFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 14);
+                Paragraph regionHeader = new Paragraph("SUMMARY FOR REGION: " + regionName.toUpperCase(), subTitleFont);
+                regionHeader.setSpacingBefore(10);
+                regionHeader.setSpacingAfter(10);
+                document.add(regionHeader);
+                
+                // When filtered, show summary instead of single-row tables
+                long sentCount = parcelRepository.countParcelsBySourceRegion(startDate, endDate, regionId).stream().mapToLong(RegionStatsDTO::getParcelCount).sum();
+                long receivedCount = parcelRepository.countParcelsByDestinationRegion(startDate, endDate, regionId).stream().mapToLong(RegionStatsDTO::getParcelCount).sum();
+                long deliveredCount = deliveryUpdateRepository.countDeliveredParcelsByRegion(startDate, endDate, regionId).stream().mapToLong(RegionStatsDTO::getParcelCount).sum();
 
-            // Parcels by Source Region
-            addSectionTitle(document, "Parcels by Source Region");
-            List<RegionStatsDTO> sourceRegionStats = parcelRepository.countParcelsBySourceRegion(startDate, endDate, regionId);
-            PdfPTable sourceRegionTable = createTable(new String[]{"Region Name", "Parcel Count"}, new float[]{3f, 1f});
+                Font normalFont = FontFactory.getFont(FontFactory.HELVETICA, 11);
+                document.add(new Paragraph("• Number of parcels sent from this region: " + sentCount, normalFont));
+                document.add(new Paragraph("• Number of parcels addressed to this region: " + receivedCount, normalFont));
+                document.add(new Paragraph("• Number of parcels successfully delivered in this region: " + deliveredCount, normalFont));
+            }
+
             Font cellFont = FontFactory.getFont(FontFactory.HELVETICA, 10);
-            for (RegionStatsDTO stat : sourceRegionStats) {
-                sourceRegionTable.addCell(new Phrase(stat.getRegionName(), cellFont));
-                sourceRegionTable.addCell(new Phrase(String.valueOf(stat.getParcelCount()), cellFont));
-            }
-            document.add(sourceRegionTable);
 
-            // Parcels by Destination Region
-            addSectionTitle(document, "Parcels by Destination Region");
-            List<RegionStatsDTO> regionStats = parcelRepository.countParcelsByDestinationRegion(startDate, endDate, regionId);
-            PdfPTable regionTable = createTable(new String[]{"Region Name", "Parcel Count"}, new float[]{3f, 1f});
-            for (RegionStatsDTO stat : regionStats) {
-                regionTable.addCell(new Phrase(stat.getRegionName(), cellFont));
-                regionTable.addCell(new Phrase(String.valueOf(stat.getParcelCount()), cellFont));
-            }
-            document.add(regionTable);
-
+            // Distribution tables
+            
             // Parcels by Delivery Mode
-            addSectionTitle(document, "Parcels by Delivery Mode");
+            addSectionTitle(document, "Delivery Mode Popularity");
             List<DeliveryModeStatsDTO> modeStats = parcelRepository.countParcelsByDeliveryMode(startDate, endDate, regionId);
             PdfPTable modeTable = createTable(new String[]{"Delivery Mode", "Parcel Count"}, new float[]{3f, 1f});
             for (DeliveryModeStatsDTO stat : modeStats) {
@@ -108,7 +104,7 @@ public class ReportService {
             document.add(modeTable);
 
             // Delivered Parcels by Courier
-            addSectionTitle(document, "Delivered Parcels by Courier");
+            addSectionTitle(document, "Courier Performance Ranking");
             List<CourierStatsDTO> courierStats = deliveryUpdateRepository.countDeliveredParcelsByCourier(startDate, endDate, regionId);
             PdfPTable courierTable = createTable(new String[]{"First Name", "Last Name", "Delivered Count"}, new float[]{2f, 2f, 1f});
             for (CourierStatsDTO stat : courierStats) {
@@ -118,15 +114,26 @@ public class ReportService {
             }
             document.add(courierTable);
 
-            // Delivered Parcels by Region
-            addSectionTitle(document, "Delivered Parcels by Region");
-            List<RegionStatsDTO> deliveredRegionStats = deliveryUpdateRepository.countDeliveredParcelsByRegion(startDate, endDate, regionId);
-            PdfPTable deliveredRegionTable = createTable(new String[]{"Region Name", "Delivered Count"}, new float[]{3f, 1f});
-            for (RegionStatsDTO stat : deliveredRegionStats) {
-                deliveredRegionTable.addCell(new Phrase(stat.getRegionName(), cellFont));
-                deliveredRegionTable.addCell(new Phrase(String.valueOf(stat.getParcelCount()), cellFont));
+            if (regionId == null) {
+                // Show these tables only in Global Report
+                addSectionTitle(document, "Shipping Volume by Region");
+                List<RegionStatsDTO> sourceRegionStats = parcelRepository.countParcelsBySourceRegion(startDate, endDate, null);
+                PdfPTable sourceRegionTable = createTable(new String[]{"Region Name", "Sent Count"}, new float[]{3f, 1f});
+                for (RegionStatsDTO stat : sourceRegionStats) {
+                    sourceRegionTable.addCell(new Phrase(stat.getRegionName(), cellFont));
+                    sourceRegionTable.addCell(new Phrase(String.valueOf(stat.getParcelCount()), cellFont));
+                }
+                document.add(sourceRegionTable);
+
+                addSectionTitle(document, "Delivery Volume by Region");
+                List<RegionStatsDTO> deliveredRegionStats = deliveryUpdateRepository.countDeliveredParcelsByRegion(startDate, endDate, null);
+                PdfPTable deliveredRegionTable = createTable(new String[]{"Region Name", "Delivered Count"}, new float[]{3f, 1f});
+                for (RegionStatsDTO stat : deliveredRegionStats) {
+                    deliveredRegionTable.addCell(new Phrase(stat.getRegionName(), cellFont));
+                    deliveredRegionTable.addCell(new Phrase(String.valueOf(stat.getParcelCount()), cellFont));
+                }
+                document.add(deliveredRegionTable);
             }
-            document.add(deliveredRegionTable);
 
             document.close();
             return baos.toByteArray();
