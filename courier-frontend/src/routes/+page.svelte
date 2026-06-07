@@ -129,6 +129,26 @@
         {:else if foundParcel}
             {@const currentIndex = getStatusIndex(foundParcel)}
             <div class="glass-panel animate-fade-in">
+                {#if ['LOST', 'DAMAGED', 'FAILED', 'UNDELIVERED'].includes(foundParcel.status)}
+                    <div class="glass-panel error-message animate-slide-down" style="margin-bottom: 2rem; border-color: var(--danger); background: rgba(239, 68, 68, 0.08);">
+                        <div style="display: flex; align-items: center; gap: 1rem;">
+                            <div style="background: var(--danger); color: white; padding: 0.5rem; border-radius: 50%; display: flex;">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                                    <line x1="12" y1="9" x2="12" y2="13"></line>
+                                    <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                                </svg>
+                            </div>
+                            <div>
+                                <h4 style="margin: 0; color: var(--text-primary); font-size: 1.1rem;">Issue encountered: {foundParcel.status.replace('_', ' ')}</h4>
+                                <p style="margin: 0.25rem 0 0 0; color: var(--text-secondary); font-size: 0.9rem;">
+                                    Please contact our support for more information regarding your parcel.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                {/if}
+
                 <div class="parcel-header">
                     <div>
                         <div style="font-size: 0.875rem; color: var(--text-tertiary); text-transform: uppercase;">Tracking Number</div>
