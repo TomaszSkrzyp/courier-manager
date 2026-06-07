@@ -133,8 +133,14 @@
     }
 
     async function submitIssue() {
-        if (!commentText.trim()) {
-            commentError = "A written comment is mandatory for this status.";
+        commentError = "";
+        const trimmedComment = commentText.trim();
+        if (!trimmedComment || trimmedComment.length < 10) {
+            commentError = "Comment must be at least 10 characters long.";
+            return;
+        }
+        if (!/[a-zA-Z0-9]/.test(trimmedComment)) {
+            commentError = "Comment must contain alphanumeric characters.";
             return;
         }
 
@@ -143,7 +149,7 @@
                 const res = await fetch(`http://localhost:8080/api/parcels/${selectedPackage.id}/status`, {
                     method: "PATCH",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify(trimObject({ status: selectedStatus, comment: commentText, employeeId: auth.userId?.toString() }))
+                    body: JSON.stringify(trimObject({ status: selectedStatus, comment: trimmedComment, employeeId: auth.userId?.toString() }))
                 });
                 
                 if (res.ok) {
@@ -152,14 +158,21 @@
                             ? { ...p, status: selectedStatus } 
                             : p
                     );
+                    showCommentModal = false;
+                    selectedPackage = null;
+                } else {
+                    try {
+                        const errorData = await res.json();
+                        commentError = errorData.message || "Failed to update status.";
+                    } catch {
+                        commentError = "Server error. Please try again.";
+                    }
                 }
             } catch (e) {
                 console.error("Failed to submit issue", e);
+                commentError = "Connection error.";
             }
         }
-        
-        showCommentModal = false;
-        selectedPackage = null;
     }
 </script>
 
@@ -355,7 +368,13 @@
                                 </button>
                                 {#if activeDropdownId === pkg.id}
                                     <div class="dropdown-content show">
-                                        <button onclick={() => { openIssueModal(pkg, 'UNDELIVERED'); activeDropdownId = null; }}>Recipient absent</button>
+                                        <button 
+                                            disabled={pkg.status !== 'OUT_FOR_DELIVERY'} 
+                                            style="opacity: {pkg.status !== 'OUT_FOR_DELIVERY' ? 0.5 : 1}; cursor: {pkg.status !== 'OUT_FOR_DELIVERY' ? 'not-allowed' : 'pointer'}"
+                                            onclick={() => { if (pkg.status === 'OUT_FOR_DELIVERY') openIssueModal(pkg, 'UNDELIVERED'); activeDropdownId = null; }}
+                                        >
+                                            Recipient absent
+                                        </button>
                                         <button onclick={() => { openIssueModal(pkg, 'DAMAGED'); activeDropdownId = null; }}>Package damaged</button>
                                         <button onclick={() => { openIssueModal(pkg, 'LOST'); activeDropdownId = null; }}>Lost in transit</button>
                                     </div>

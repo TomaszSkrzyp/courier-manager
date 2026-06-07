@@ -212,6 +212,25 @@ public class ParcelService {
      */
     public Optional<ParcelDTO> updateParcelStatus(Integer id, String newStatusName, String comment, Integer employeeId) {
         return parcelRepository.findById(id).map(parcel -> {
+            // Business Rule: UNDELIVERED can only be set if OUT_FOR_DELIVERY
+            if (ParcelStatus.UNDELIVERED.equals(newStatusName) && !ParcelStatus.OUT_FOR_DELIVERY.equals(parcel.getStatus().getName())) {
+                throw new pl.polsl.tab.kurier.exception.ResourceBusyException("Cannot report client absent: package must be out for delivery.");
+            }
+
+            // Business Rule: LOST or DAMAGED can only be set if already picked up or at hub
+            if ((ParcelStatus.LOST.equals(newStatusName) || ParcelStatus.DAMAGED.equals(newStatusName)) 
+                && (ParcelStatus.REGISTERED.equals(parcel.getStatus().getName()) || ParcelStatus.PENDING_PICKUP.equals(parcel.getStatus().getName()))) {
+                throw new pl.polsl.tab.kurier.exception.ResourceBusyException("Cannot report issue: package not yet picked up by any courier.");
+            }
+
+            // Comment validation: avoid "random signs" or too short
+            if (comment == null || comment.trim().length() < 10) {
+                throw new pl.polsl.tab.kurier.exception.ResourceBusyException("Comment is too short. Please provide at least 10 meaningful characters.");
+            }
+            if (!comment.matches(".*[a-zA-Z0-9].*")) {
+                throw new pl.polsl.tab.kurier.exception.ResourceBusyException("Comment must contain alphanumeric characters.");
+            }
+
             Status status = resolveOrCreateStatus(newStatusName);
             parcel.setStatus(status);
             parcelRepository.save(parcel);
