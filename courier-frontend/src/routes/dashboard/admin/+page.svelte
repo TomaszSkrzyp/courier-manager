@@ -73,22 +73,32 @@
 
     async function handleAddRegion(e: SubmitEvent) {
         e.preventDefault();
-        if (!newRegionName.trim()) return;
+        const trimmedName = newRegionName.trim();
+        if (!trimmedName) return;
         isSubmitting = true;
+        modalErrorMessage = "";
         try {
             const res = await fetch("http://localhost:8080/api/regions", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(trimObject({ name: newRegionName }))
+                body: JSON.stringify({ name: trimmedName })
             });
             if (res.ok) {
                 const added = await res.json();
                 regions = [...regions, added];
                 newRegionName = "";
                 showAddRegionModal = false;
+            } else {
+                try {
+                    const errorData = await res.json();
+                    modalErrorMessage = errorData.message || `Error ${res.status}`;
+                } catch {
+                    modalErrorMessage = `Failed to add region (Error ${res.status})`;
+                }
             }
         } catch (e) {
             console.error("Failed to add region", e);
+            modalErrorMessage = "Connection error.";
         } finally {
             isSubmitting = false;
         }
@@ -130,18 +140,21 @@
     function openEditRegionModal(region: {id: number, name: string}) {
         editingRegionId = region.id;
         editRegionName = region.name;
+        modalErrorMessage = "";
         showEditRegionModal = true;
     }
 
     async function handleUpdateRegion(e: SubmitEvent) {
         e.preventDefault();
-        if (!editRegionName.trim()) return;
+        const trimmedName = editRegionName.trim();
+        if (!trimmedName) return;
         isSubmitting = true;
+        modalErrorMessage = "";
         try {
             const res = await fetch(`http://localhost:8080/api/regions/${editingRegionId}`, {
                 method: "PUT",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(trimObject({ name: editRegionName }))
+                body: JSON.stringify({ name: trimmedName })
             });
             if (res.ok) {
                 const updated = await res.json();
@@ -151,9 +164,17 @@
                 editRegionName = "";
 
                 fetchEmployees(currentPage);
+            } else {
+                try {
+                    const errorData = await res.json();
+                    modalErrorMessage = errorData.message || `Error ${res.status}`;
+                } catch {
+                    modalErrorMessage = `Failed to update region (Error ${res.status})`;
+                }
             }
         } catch (e) {
             console.error("Failed to update region", e);
+            modalErrorMessage = "Connection error.";
         } finally {
             isSubmitting = false;
         }
@@ -596,24 +617,24 @@
             </div>
         {:else if activeTab === 'regions'}
             <div in:fade={{duration: 200}}>
-                <div class="glass-panel" style="padding: 0; overflow: hidden;">
-                    <div style="padding: 1.5rem; border-bottom: 1px solid var(--border-color);">
+                <div class="glass-panel" style="padding: 0; overflow-x: auto;">
+                    <div style="padding: 1.5rem; border-bottom: 1px solid var(--border-color); min-width: 600px;">
                         <h3>Current Regions</h3>
                         <p style="color: var(--text-tertiary); font-size: 0.9rem; margin-top: 0.5rem;">List of all service areas.</p>
                     </div>
-                    <table class="data-table">
+                    <table class="data-table" style="min-width: 600px;">
                         <thead>
                             <tr>
-                                <th>ID</th>
+                                <th style="width: 80px;">ID</th>
                                 <th>Name</th>
-                                <th style="text-align: right;">Actions</th>
+                                <th style="text-align: right; width: 120px;">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
                             {#each regions as region}
                                 <tr>
                                     <td style="font-family: monospace; color: var(--text-tertiary);">#{region.id}</td>
-                                    <td style="font-weight: 500;">{region.name}</td>
+                                    <td style="font-weight: 500; min-width: 150px;">{region.name}</td>
                                     <td style="text-align: right;">
                                         <div class="actions-cell">
                                             <button class="btn-action btn-edit" title="Edit" onclick={() => openEditRegionModal(region)}>
@@ -802,6 +823,11 @@
             </div>
 
             <form onsubmit={handleAddRegion}>
+                {#if modalErrorMessage}
+                    <div class="glass-panel error-message" style="margin-bottom: 1.5rem; padding: 0.75rem 1rem;" transition:slide>
+                        <span style="font-size: 0.9rem;">{modalErrorMessage}</span>
+                    </div>
+                {/if}
                 <div class="input-group">
                     <label>Region/City Name</label>
                     <input bind:value={newRegionName} type="text" class="input-field" placeholder="e.g. Radom" required />
@@ -829,6 +855,13 @@
                         <line x1="6" y1="6" x2="18" y2="18"></line>
                     </svg>
                 </button>
+            </div>
+
+            <div class="glass-panel" style="margin-bottom: 1.5rem; padding: 1rem; background: rgba(14, 165, 233, 0.05); border-color: rgba(14, 165, 233, 0.2);">
+                <h5 style="margin-top: 0; color: var(--primary); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.05em;">Price Calculation Formula</h5>
+                <p style="font-size: 0.85rem; line-height: 1.5; color: var(--text-secondary); margin-bottom: 0;">
+                    Total Price = <strong>Base Mode Price</strong> + (<strong>Weight</strong> × Weight Delta) + (<strong>Length + Width + Height</strong>) × Dimensional Delta.
+                </p>
             </div>
 
             <form onsubmit={handleAddPriceDelta}>
@@ -1160,6 +1193,8 @@
         text-align: left;
         border-bottom: 1px solid var(--border-color);
         vertical-align: middle;
+        word-break: break-word;
+        max-width: 300px;
     }
 
     /* Fix actions alignment */

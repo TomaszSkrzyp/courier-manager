@@ -9,6 +9,7 @@ public class RegionDTO {
     private Integer id;
 
     @NotBlank(message = "Region name is required")
+    @jakarta.validation.constraints.Size(max = 100, message = "Region name cannot exceed 100 characters")
     private String name;
 
     public static RegionDTO fromEntity(Region region) {

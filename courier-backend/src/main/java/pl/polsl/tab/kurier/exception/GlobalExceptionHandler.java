@@ -10,9 +10,32 @@ import org.springframework.core.Ordered;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.springframework.web.bind.MethodArgumentNotValidException;
+import java.util.stream.Collectors;
+
 @RestControllerAdvice
 @Order(Ordered.HIGHEST_PRECEDENCE)
 public class GlobalExceptionHandler {
+
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ResponseEntity<Map<String, Object>> handleValidationExceptions(MethodArgumentNotValidException ex) {
+        String message = ex.getBindingResult().getAllErrors().stream()
+                .map(org.springframework.validation.ObjectError::getDefaultMessage)
+                .collect(Collectors.joining(", "));
+        
+        Map<String, Object> body = new HashMap<>();
+        body.put("message", "Validation error: " + message);
+        body.put("status", HttpStatus.BAD_REQUEST.value());
+        return new ResponseEntity<>(body, HttpStatus.BAD_REQUEST);
+    }
+
+    @ExceptionHandler(org.hibernate.exception.DataException.class)
+    public ResponseEntity<Map<String, Object>> handleDataException(org.hibernate.exception.DataException ex) {
+        Map<String, Object> body = new HashMap<>();
+        body.put("message", "The provided value is too large for the database system.");
+        body.put("status", HttpStatus.BAD_REQUEST.value());
+        return new ResponseEntity<>(body, HttpStatus.BAD_REQUEST);
+    }
 
     @ExceptionHandler(ResourceBusyException.class)
     public ResponseEntity<Map<String, Object>> handleResourceBusyException(ResourceBusyException ex) {
