@@ -31,10 +31,12 @@
     let editRegionName = $state("");
 
     let errorMessage = $state("");
+    let modalErrorMessage = $state("");
 
     $effect(() => {
         activeTab;
         errorMessage = "";
+        modalErrorMessage = "";
     });
 
     async function fetchEmployees(page = 0) {
@@ -168,6 +170,7 @@
     let editEmp = $state({
         firstName: "",
         lastName: "",
+        pesel: "",
         login: "",
         password: "",
         role: "COURIER",
@@ -284,15 +287,24 @@
 
     async function deleteEmployee(id: number) {
         if(confirm("Are you sure you want to remove this employee?")) {
+            errorMessage = "";
             try {
                 const res = await fetch(`http://localhost:8080/api/employees/${id}`, {
                     method: "DELETE"
                 });
                 if (res.ok) {
                     fetchEmployees(currentPage);
+                } else {
+                    try {
+                        const errorData = await res.json();
+                        errorMessage = errorData.message || `Error ${res.status}: ${res.statusText}`;
+                    } catch {
+                        errorMessage = `Failed to delete employee. Error ${res.status}.`;
+                    }
                 }
             } catch (e) {
                 console.error("Failed to delete employee", e);
+                errorMessage = "Connection error.";
             }
         }
     }
@@ -307,6 +319,7 @@
         editEmp = {
             firstName: emp.firstName,
             lastName: emp.lastName,
+            pesel: (emp as any).pesel || "", // Ensure pesel is included
             login: emp.login,
             password: "",
             role: emp.role,
@@ -318,6 +331,7 @@
     async function handleEditEmployee(e: SubmitEvent) {
         e.preventDefault();
         isSubmitting = true;
+        modalErrorMessage = "";
 
         try {
             const res = await fetch(`http://localhost:8080/api/employees/${editingId}`, {
@@ -336,9 +350,30 @@
                 
                 const regRes = await fetch("http://localhost:8080/api/regions");
                 if (regRes.ok) regions = await regRes.json();
+            } else {
+                try {
+                    const errorData = await res.json();
+                    let rawMessage = errorData.message || "";
+                    
+                    // User friendly extraction of validation errors
+                    if (rawMessage.includes("default message [")) {
+                        const matches = rawMessage.match(/default message \[(.*?)\]/g);
+                        if (matches && matches.length > 0) {
+                            // Take the last match which is usually the specific constraint message
+                            modalErrorMessage = matches[matches.length - 1].replace("default message [", "").replace("]", "");
+                        } else {
+                            modalErrorMessage = "Invalid input data. Please check all fields.";
+                        }
+                    } else {
+                        modalErrorMessage = rawMessage || `Server error ${res.status}`;
+                    }
+                } catch {
+                    modalErrorMessage = "Failed to update employee. Please try again.";
+                }
             }
         } catch (e) {
             console.error("Failed to edit employee", e);
+            modalErrorMessage = "Connection error. Check your internet.";
         } finally {
             isSubmitting = false;
         }
@@ -497,12 +532,16 @@
                                                             <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
                                                         </svg>
                                                     </button>
-                                                    <button class="btn-action btn-delete" title="Remove" onclick={() => deleteEmployee(emp.id)}>
-                                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                                            <polyline points="3 6 5 6 21 6"></polyline>
-                                                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                                                        </svg>
-                                                    </button>
+                                                    {#if emp.role !== 'ADMIN'}
+                                                        <button class="btn-action btn-delete" title="Remove" onclick={() => deleteEmployee(emp.id)}>
+                                                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                                <polyline points="3 6 5 6 21 6"></polyline>
+                                                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                                                            </svg>
+                                                        </button>
+                                                    {:else}
+                                                        <div style="width: 34px;"></div> <!-- Placeholder to keep alignment -->
+                                                    {/if}
                                                 </div>
                                             </td>
                                         </tr>
@@ -834,6 +873,11 @@
             </div>
 
             <form onsubmit={handleEditEmployee}>
+                {#if modalErrorMessage}
+                    <div class="glass-panel error-message" style="margin-bottom: 1.5rem; padding: 0.75rem 1rem;" transition:slide>
+                        <span style="font-size: 0.9rem;">{modalErrorMessage}</span>
+                    </div>
+                {/if}
                 <div class="grid-2">
                     <div class="input-group">
                         <label>First Name</label>
@@ -843,6 +887,25 @@
                         <label>Last Name</label>
                         <input bind:value={editEmp.lastName} type="text" class="input-field" required />
                     </div>
+                </div>
+
+                <div class="input-group">
+                    <label for="edit-pesel-input">PESEL</label>
+                    <input 
+                        id="edit-pesel-input"
+                        bind:value={editEmp.pesel} 
+                        oninput={(e) => {
+                            editEmp.pesel = e.currentTarget.value.replace(/\D/g, '').substring(0, 11);
+                        }}
+                        type="text" 
+                        inputmode="numeric"
+                        class="input-field" 
+                        placeholder="11-digit PESEL"
+                        required 
+                        minlength="11"
+                        maxlength="11"
+                        title="PESEL must be exactly 11 digits"
+                    />
                 </div>
 
                 <div class="grid-2">

@@ -64,11 +64,13 @@ public class EmployeeService {
     }
 
     public boolean deleteEmployee(Integer id) {
-        if (employeeRepository.existsById(id)) {
-            employeeRepository.deleteById(id);
+        return employeeRepository.findById(id).map(employee -> {
+            if ("ADMIN".equals(employee.getRole().getName())) {
+                throw new pl.polsl.tab.kurier.exception.ResourceBusyException("Cannot delete administrator account.");
+            }
+            employeeRepository.delete(employee);
             return true;
-        }
-        return false;
+        }).orElse(false);
     }
 
     private void updateEmployeeFromDto(Employee employee, EmployeeDTO dto) {
