@@ -56,15 +56,24 @@
     });
 
     const statuses = ["Created", "Collected", "In Transit", "Out for Delivery", "Delivered"];
-    function getStatusIndex(status: string) {
+    function getStatusIndex(parcel: any) {
         // Map backend status to our visual timeline
-        if (!status) return 0;
-        const s = status.toUpperCase();
+        if (!parcel || !parcel.status) return 0;
+        const s = parcel.status.toUpperCase();
         if (s.includes("CREATE") || s.includes("REGISTER") || s.includes("NONE")) return 0;
-        if (s.includes("COLLECT") || s.includes("PICKUP")) return 1;
-        if (s.includes("TRANSIT") || s.includes("HUB") || s.includes("SORT")) return 2;
+        
+        // Stage 1: Collected (picked up from sender, on its way to FIRST hub)
+        if (s === "IN_TRANSIT" && parcel.currentRegion === parcel.senderCity) return 1;
+
+        // Stage 2: In Transit (arrived at first hub, moving between hubs, or at intermediate hub)
+        if (s.includes("TRANSIT") || s.includes("HUB") || s.includes("PICKUP")) return 2;
+        
+        // Stage 3: Out for Delivery (last mile)
         if (s.includes("OUT")) return 3;
+        
+        // Stage 4: Delivered
         if (s.includes("DELIVER")) return 4;
+        
         return 2; // Default fallback
     }
 </script>
@@ -118,7 +127,7 @@
                 <p style="color: var(--text-secondary);">Please check your tracking number and try again.</p>
             </div>
         {:else if foundParcel}
-            {@const currentIndex = getStatusIndex(foundParcel.status)}
+            {@const currentIndex = getStatusIndex(foundParcel)}
             <div class="glass-panel animate-fade-in">
                 <div class="parcel-header">
                     <div>
@@ -128,13 +137,6 @@
                     <div style="text-align: right; display: flex; flex-direction: column; gap: 0.5rem; align-items: flex-end;">
                         <span class="badge" class:badge-admin={foundParcel.deliveryMode === 'EXPRESS'} class:badge-warning={foundParcel.deliveryMode === 'NORMAL'}>
                             {foundParcel.deliveryMode}
-                        </span>
-                        <span class="badge badge-success" style="font-size: 1rem; padding: 0.5rem 1rem;">
-                            {#if foundParcel.status === 'AT_HUB'}
-                                AT HUB: {foundParcel.currentRegion}
-                            {:else}
-                                {foundParcel.status || "In Transit"}
-                            {/if}
                         </span>
                     </div>
                 </div>

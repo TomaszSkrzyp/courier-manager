@@ -23,6 +23,7 @@
         nextRegion: string;
         currentRegion: string;
         currentRegionId: number;
+        phoneNumber: string;
     }
 
     let assignedPackages = $state<Package[]>([]);
@@ -37,13 +38,18 @@
     let commentText = $state("");
     let commentError = $state("");
 
-    async function fetchParcels() {
-        isLoading = true;
+    let lastDataHash = "";
+    async function fetchParcels(silent = false) {
+        if (!silent) isLoading = true;
         try {
             if (!auth.userId) return;
             const res = await fetch(`http://localhost:8080/api/parcels/courier/${auth.userId}`);
             if (res.ok) {
                 const data = await res.json();
+                const dataHash = JSON.stringify(data);
+                if (dataHash === lastDataHash) return;
+                lastDataHash = dataHash;
+
                 assignedPackages = data.map((p: any) => ({
                     id: p.parcelId,
                     trackingNumber: p.trackingNumber,
@@ -61,13 +67,18 @@
                     fragility: p.fragility || "no",
                     nextRegion: p.nextRegion || "N/A",
                     currentRegion: p.currentRegion || "N/A",
-                    currentRegionId: p.currentRegionId || 0
-                }));
+                    currentRegionId: p.currentRegionId || 0,
+                    phoneNumber: p.phoneNumber || "N/A"
+                })).sort((a: any, b: any) => {
+                    if (a.deliveryMode === 'EXPRESS' && b.deliveryMode !== 'EXPRESS') return -1;
+                    if (a.deliveryMode !== 'EXPRESS' && b.deliveryMode === 'EXPRESS') return 1;
+                    return 0;
+                });
             }
         } catch (e) {
             console.error("Failed to fetch assigned packages", e);
         } finally {
-            isLoading = false;
+            if (!silent) isLoading = false;
         }
     }
 
@@ -77,7 +88,13 @@
             activeDropdownId = null;
         };
         window.addEventListener('click', handleGlobalClick);
-        return () => window.removeEventListener('click', handleGlobalClick);
+
+        const interval = setInterval(() => fetchParcels(true), 10000);
+
+        return () => {
+            window.removeEventListener('click', handleGlobalClick);
+            clearInterval(interval);
+        };
     });
 
     async function handleSuccess(pkg: Package) {
@@ -90,6 +107,7 @@
             });
             if (res.ok) {
                 assignedPackages = assignedPackages.map(p => p.id === pkg.id ? { ...p, status: 'DELIVERED' } : p);
+                fetchParcels(true); 
             } else {
                 const errorData = await res.json();
                 errorMessage = errorData.message || "Failed to mark as delivered.";
@@ -213,7 +231,7 @@
                 </svg>
                 <span style="color: var(--text-primary); font-weight: 500;">{errorMessage}</span>
             </div>
-            <button class="btn-action" style="color: var(--text-tertiary); background: transparent; border: none; cursor: pointer;" onclick={() => errorMessage = ""}>
+            <button class="btn-action" aria-label="Close" style="color: var(--text-tertiary); background: transparent; border: none; cursor: pointer;" onclick={() => errorMessage = ""}>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <line x1="18" y1="6" x2="6" y2="18"></line>
                     <line x1="6" y1="6" x2="18" y2="18"></line>
@@ -259,7 +277,11 @@
                                     <circle cx="12" cy="12" r="10"></circle>
                                     <polyline points="12 6 12 12 16 14"></polyline>
                                 </svg>
-                                {pkg.expectedDelivery}
+                                {#if pkg.status === 'DELIVERED'}
+                                    Delivered: {pkg.expectedDelivery}
+                                {:else}
+                                    Expected: {pkg.expectedDelivery}
+                                {/if}
                             </div>
                         </div>
 
@@ -275,26 +297,12 @@
                                     {/if}
                                 </div>
                                 <div class="route-content">
-                                    {#if pkg.status === 'PENDING_PICKUP'}
+                                    {#if pkg.status === 'REGISTERED' || (pkg.status === 'IN_TRANSIT' && pkg.currentRegion === pkg.nextRegion && pkg.currentRegion === pkg.senderCity)}
                                         <div class="route-main">{pkg.senderAddress}</div>
                                         <div class="route-sub">{pkg.senderCity} <span class="loc-tag">Sender</span></div>
-                                    {:else if pkg.status === 'OUT_FOR_DELIVERY'}
-                                        <div class="route-main">{pkg.currentRegion} Hub</div>
-                                        <div class="route-sub">Local Distribution</div>
-                                    {:else if pkg.status === 'IN_TRANSIT'}
-                                        {#if pkg.currentRegion === pkg.nextRegion}
-                                            <div class="route-main">{pkg.senderAddress}</div>
-                                            <div class="route-sub">{pkg.senderCity} <span class="loc-tag">Sender</span></div>
-                                        {:else}
-                                            <div class="route-main">{pkg.currentRegion} Hub</div>
-                                            <div class="route-sub">Source Hub</div>
-                                        {/if}
-                                    {:else if pkg.status === 'AT_HUB'}
-                                        <div class="route-main">{pkg.currentRegion} Hub</div>
-                                        <div class="route-sub">Current Location</div>
                                     {:else}
-                                        <div class="route-main">{pkg.senderCity}</div>
-                                        <div class="route-sub">Origin</div>
+                                        <div class="route-main">{pkg.currentRegion} Hub</div>
+                                        <div class="route-sub">Regional Distribution Center</div>
                                     {/if}
                                 </div>
                             </div>
@@ -317,17 +325,15 @@
                                     {/if}
                                 </div>
                                 <div class="route-content">
-                                    {#if pkg.status === 'OUT_FOR_DELIVERY'}
-                                        <div class="route-main">{pkg.address}</div>
-                                        <div class="route-sub">{pkg.city} <span class="loc-tag">Recipient</span></div>
-                                    {:else if pkg.status === 'PENDING_PICKUP' || (pkg.status === 'IN_TRANSIT' && pkg.currentRegion === pkg.nextRegion)}
+                                    {#if pkg.status === 'REGISTERED' || (pkg.status === 'IN_TRANSIT' && pkg.currentRegion === pkg.nextRegion && pkg.currentRegion === pkg.senderCity)}
                                         <div class="route-main">{pkg.senderCity} Hub</div>
-                                    {:else if pkg.status === 'AT_HUB' && pkg.currentRegion === pkg.city}
+                                        <div class="route-sub">Local Intake</div>
+                                    {:else if pkg.status === 'OUT_FOR_DELIVERY' || (pkg.status === 'PENDING_PICKUP' && pkg.currentRegion === pkg.city)}
                                         <div class="route-main">{pkg.address}</div>
                                         <div class="route-sub">{pkg.city} <span class="loc-tag">Recipient</span></div>
                                     {:else}
                                         <div class="route-main">{pkg.nextRegion} Hub</div>
-                                        <div class="route-sub">Target Hub</div>
+                                        <div class="route-sub">Intermediate Hub</div>
                                     {/if}
                                 </div>
                             </div>
@@ -339,8 +345,8 @@
                                 <span class="phys-value">{pkg.weight} kg</span>
                             </div>
                             <div class="phys-item">
-                                <span class="phys-label">Size (L×W×H)</span>
-                                <span class="phys-value">{pkg.length}×{pkg.width}×{pkg.height} cm</span>
+                                <span class="phys-label">Sender Phone</span>
+                                <span class="phys-value">{pkg.phoneNumber}</span>
                             </div>
                             <div class="phys-item">
                                 <span class="phys-label">Fragile</span>
@@ -440,8 +446,9 @@
             </p>
 
             <div class="input-group">
-                <label>Mandatory Comment <span style="color: var(--danger);">*</span></label>
+                <label for="comment-textarea">Mandatory Comment <span style="color: var(--danger);">*</span></label>
                 <textarea 
+                    id="comment-textarea"
                     bind:value={commentText} 
                     class="input-field" 
                     rows="4" 

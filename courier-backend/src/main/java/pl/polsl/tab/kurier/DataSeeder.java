@@ -26,6 +26,8 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Set;
 
+import pl.polsl.tab.kurier.service.RouteService;
+
 @Component
 public class DataSeeder implements CommandLineRunner {
 
@@ -37,6 +39,7 @@ public class DataSeeder implements CommandLineRunner {
     private final RegionRepository regionRepository;
     private final ParcelRepository parcelRepository;
     private final AddressRepository addressRepository;
+    private final RouteService routeService;
 
     public DataSeeder(RoleRepository roleRepository,
                       StatusRepository statusRepository,
@@ -45,7 +48,8 @@ public class DataSeeder implements CommandLineRunner {
                       EmployeeRepository employeeRepository,
                       RegionRepository regionRepository,
                       ParcelRepository parcelRepository,
-                      AddressRepository addressRepository) {
+                      AddressRepository addressRepository,
+                      RouteService routeService) {
         this.roleRepository = roleRepository;
         this.statusRepository = statusRepository;
         this.deliveryModeRepository = deliveryModeRepository;
@@ -54,6 +58,7 @@ public class DataSeeder implements CommandLineRunner {
         this.regionRepository = regionRepository;
         this.parcelRepository = parcelRepository;
         this.addressRepository = addressRepository;
+        this.routeService = routeService;
     }
 
     @Override
@@ -230,7 +235,13 @@ public class DataSeeder implements CommandLineRunner {
         Parcel p = new Parcel();
         p.setPhoneNumber(phone);
         p.setWeight(weight);
-        p.setExpectedTime(LocalDateTime.now().plusDays(2));
+        
+        int routeLength = routeService.findRouteLength(curr.getRegionId(), recipient.getRegion().getRegionId());
+        if (routeLength == -1) routeLength = 1;
+        boolean isExpress = mode.getName().equalsIgnoreCase("EXPRESS");
+        double daysToDeliver = (routeLength + 1) * (isExpress ? 1.0 : 1.5);
+        p.setExpectedTime(LocalDateTime.now().plusHours((long)(daysToDeliver * 24)));
+        
         p.setDeliveryMode(mode);
         p.setSenderAddress(sender);
         p.setDestinationAddress(recipient);

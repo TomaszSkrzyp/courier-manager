@@ -23,6 +23,7 @@
         length: number;
         fragility: string;
         expectedDelivery: string;
+        deliveredAt?: string;
         price: number;
         phoneNumber: string;
         comment: string;
@@ -56,8 +57,9 @@
         errorMessage = "";
     });
 
-    async function fetchPackages(page = 0) {
-        isLoadingData = true;
+    let lastDataHash = "";
+    async function fetchPackages(page = 0, silent = false) {
+        if (!silent) isLoadingData = true;
         errorMessage = "";
         try {
             const params = new URLSearchParams({
@@ -72,6 +74,9 @@
             const res = await fetch(`http://localhost:8080/api/parcels?${params.toString()}`);
             if (res.ok) {
                 const data = await res.json();
+                const dataHash = JSON.stringify(data);
+                if (dataHash === lastDataHash) return;
+                lastDataHash = dataHash;
                 
                 // Handle different response formats (Paginated vs Direct List)
                 let content = [];
@@ -105,12 +110,17 @@
                     length: Number(p.length) || 0,
                     fragility: p.fragility || "no",
                     expectedDelivery: p.expectedDelivery || "N/A",
+                    deliveredAt: p.deliveredAt,
                     price: Number(p.price) || 0,
                     phoneNumber: p.phoneNumber || "N/A",
                     comment: p.comment || "",
                     currentRegion: p.currentRegion || "N/A",
                     showDetails: false
-                }));
+                })).sort((a: any, b: any) => {
+                    if (a.deliveryMode === 'EXPRESS' && b.deliveryMode !== 'EXPRESS') return -1;
+                    if (a.deliveryMode !== 'EXPRESS' && b.deliveryMode === 'EXPRESS') return 1;
+                    return 0;
+                });
             } else {
                 errorMessage = `Server error: ${res.status} ${res.statusText}`;
             }
@@ -118,7 +128,7 @@
             console.error("Fetch error:", err);
             errorMessage = "Failed to load data. Please check server connection.";
         } finally {
-            isLoadingData = false;
+            if (!silent) isLoadingData = false;
         }
     }
 
@@ -153,6 +163,14 @@
         } catch (err) {
             console.error("Failed to fetch regions", err);
         }
+
+        const interval = setInterval(() => {
+            if (activeTab === 'manage') {
+                fetchPackages(currentPage, true);
+            }
+        }, 10000);
+
+        return () => clearInterval(interval);
     });
 
     function handlePageChange(newPage: number) {
@@ -166,14 +184,17 @@
     }
 
     async function toggleVerified(pkg: Package) {
+        if (pkg.verified) return; // Prevent redundant requests
+
         try {
             const res = await fetch(`http://localhost:8080/api/parcels/${pkg.id}/verify`, {
                 method: "PATCH",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ verified: !pkg.verified })
+                body: JSON.stringify({ verified: true })
             });
             if (res.ok) {
-                pkg.verified = !pkg.verified;
+                pkg.verified = true;
+                fetchPackages(currentPage, true);
             }
         } catch (e) {
             console.error("Failed to verify", e);
@@ -189,6 +210,7 @@
             });
             if (res.ok) {
                 pkg.status = newStatus;
+                fetchPackages(currentPage, true);
             }
         } catch (e) {
             console.error("Failed to change status", e);
@@ -316,12 +338,12 @@
                                 <tr>
                                     <th style="width: 40px;"></th>
                                     <th>Tracking Number</th>
+                                    <th>Current Location</th>
                                     <th>Destination</th>
                                     <th>Price</th>
                                     <th>Mode</th>
                                     <th>Status</th>
                                     <th>Verified</th>
-                                    <th>Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -355,6 +377,7 @@
                                                 </button>
                                             </td>
                                             <td style="font-family: monospace; font-weight: 600;">{pkg.trackingNumber}</td>
+                                            <td>{pkg.currentRegion}</td>
                                             <td>{pkg.city}</td>
                                             <td style="font-weight: 600; color: var(--secondary);">${pkg.price.toFixed(2)}</td>
                                             <td>
@@ -375,24 +398,13 @@
                                                 <button 
                                                     class="toggle-btn" 
                                                     class:active={pkg.verified}
-                                                    disabled={pkg.status !== 'AT_HUB' && !pkg.verified}
-                                                    style="opacity: {pkg.status !== 'AT_HUB' && !pkg.verified ? 0.4 : 1}; cursor: {pkg.status !== 'AT_HUB' && !pkg.verified ? 'not-allowed' : 'pointer'}"
+                                                    disabled={pkg.verified || pkg.status !== 'AT_HUB'}
+                                                    style="filter: {pkg.verified ? 'grayscale(0.8) opacity(0.6)' : 'none'}; cursor: {pkg.verified || pkg.status !== 'AT_HUB' ? 'not-allowed' : 'pointer'}"
                                                     onclick={() => toggleVerified(pkg)}
-                                                    title={pkg.status === 'AT_HUB' ? 'Verify parcel arrival at hub' : 'Only parcels at hub can be verified'}
+                                                    title={pkg.verified ? 'Parcel already verified' : (pkg.status === 'AT_HUB' ? 'Verify parcel arrival at hub' : 'Only parcels at hub can be verified')}
                                                 >
                                                     <div class="toggle-knob"></div>
                                                 </button>
-                                            </td>
-                                            <td>
-                                                <div style="font-size: 0.8rem; color: var(--text-tertiary);">
-                                                    {#if pkg.status === 'AT_HUB'}
-                                                        Await Verification
-                                                    {:else if pkg.status === 'REGISTERED'}
-                                                        Await Pickup
-                                                    {:else}
-                                                        In Process
-                                                    {/if}
-                                                </div>
                                             </td>
                                         </tr>
                                         {#if pkg.showDetails}
@@ -407,16 +419,16 @@
                                                                     <span class="value">{pkg.senderCity}</span>
                                                                 </div>
                                                                 <div class="detail-item">
+                                                                    <span class="label">Sender Phone:</span>
+                                                                    <span class="value">{pkg.phoneNumber}</span>
+                                                                </div>
+                                                                <div class="detail-item">
                                                                     <span class="label">To:</span>
                                                                     <span class="value">{pkg.city}</span>
                                                                 </div>
                                                                 <div class="detail-item">
                                                                     <span class="label">Address:</span>
                                                                     <span class="value">{pkg.address}</span>
-                                                                </div>
-                                                                <div class="detail-item">
-                                                                    <span class="label">Phone:</span>
-                                                                    <span class="value">{pkg.phoneNumber}</span>
                                                                 </div>
                                                             </div>
                                                             <div class="details-section">
@@ -445,8 +457,8 @@
                                                                     <span class="value">{pkg.date}</span>
                                                                 </div>
                                                                 <div class="detail-item">
-                                                                    <span class="label">Expected:</span>
-                                                                    <span class="value">{pkg.expectedDelivery}</span>
+                                                                    <span class="label">{pkg.status === 'DELIVERED' ? 'Delivered At:' : 'Expected:'}</span>
+                                                                    <span class="value">{pkg.status === 'DELIVERED' ? (pkg.deliveredAt || 'Recently') : pkg.expectedDelivery}</span>
                                                                 </div>
                                                                 {#if pkg.comment}
                                                                     <div class="detail-item" style="flex-direction: column; align-items: flex-start; gap: 0.25rem;">

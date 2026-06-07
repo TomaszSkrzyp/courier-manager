@@ -39,6 +39,7 @@
         modalErrorMessage = "";
     });
 
+    let lastDataHash = "";
     async function fetchEmployees(page = 0) {
         isLoadingData = true;
         errorMessage = "";
@@ -46,6 +47,10 @@
             const res = await fetch(`http://localhost:8080/api/employees?page=${page}&size=10`);
             if (res.ok) {
                 const data = await res.json();
+                const dataHash = JSON.stringify(data);
+                if (dataHash === lastDataHash) return;
+                lastDataHash = dataHash;
+
                 if (data && data.content) {
                     employees = data.content;
                     currentPage = data.number;
@@ -217,6 +222,14 @@
         } catch (e) {
             console.error("Failed to fetch initial data", e);
         }
+
+        const interval = setInterval(() => {
+            if (activeTab === 'staff') {
+                fetchEmployees(currentPage, true);
+            }
+        }, 10000);
+
+        return () => clearInterval(interval);
     });
 
     function handlePageChange(newPage: number) {

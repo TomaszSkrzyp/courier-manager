@@ -250,6 +250,11 @@ public class ParcelService {
 
             Status status = resolveOrCreateStatus(newStatusName);
             parcel.setStatus(status);
+            
+            if (ParcelStatus.DELIVERED.equals(newStatusName)) {
+                parcel.setExpectedTime(LocalDateTime.now());
+            }
+
             parcelRepository.save(parcel);
             saveDeliveryUpdate(parcel, employeeId, status, comment);
             return ParcelDTO.fromEntity(parcel);
@@ -277,6 +282,9 @@ public class ParcelService {
             }
 
             parcel.setStatus(newStatus);
+            if (ParcelStatus.DELIVERED.equals(newStatus.getName())) {
+                parcel.setExpectedTime(LocalDateTime.now());
+            }
             parcelRepository.save(parcel);
             saveDeliveryUpdate(parcel, employeeId, newStatus, "Package picked up by courier");
             return ParcelDTO.fromEntity(parcel);
@@ -294,10 +302,20 @@ public class ParcelService {
 
             // The parcel is now physically at the hub it was traveling to
             parcel.setCurrentRegion(arrivedAtHub);
-            
-            // Clear verification so a worker must accept it at this hub
-            parcel.setVerified(false);
-            Status newStatus = resolveOrCreateStatus(ParcelStatus.AT_HUB);
+            // Only unverify if this is the very first intake (from sender)
+            // We know it's the first intake if currentRegion was the same as sender city during the trip
+            Status newStatus;
+            if (parcel.getSenderAddress().getRegion().getRegionId().equals(arrivedAtHub.getRegionId()) 
+                && (parcel.getVerified() == null || !parcel.getVerified())) {
+                parcel.setVerified(false);
+                newStatus = resolveOrCreateStatus(ParcelStatus.AT_HUB);
+            } else {
+                // If it was already verified at a previous hub, it stays verified and ready for pickup
+                parcel.setVerified(true);
+                newStatus = resolveOrCreateStatus(ParcelStatus.PENDING_PICKUP);
+            }
+
+            parcel.setStatus(newStatus);
 
             if (!arrivedAtHub.getRegionId().equals(destinationRegion.getRegionId())) {
                 // Arrived at intermediate hub — compute next hop
