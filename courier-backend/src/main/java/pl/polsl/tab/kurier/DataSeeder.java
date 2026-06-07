@@ -249,6 +249,9 @@ public class DataSeeder implements CommandLineRunner {
         p.setNextRegion(next);
         p.setStatus(status);
         p.setVerified(false); // Force verification flow
+        p.setLength(BigDecimal.valueOf(30.0));
+        p.setWidth(BigDecimal.valueOf(20.0));
+        p.setHeight(BigDecimal.valueOf(15.0));
         p.setFragility("no");
         p.setPrice(BigDecimal.valueOf(20.0));
         parcelRepository.save(p);

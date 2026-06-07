@@ -166,6 +166,10 @@
                         <span class="detail-value">{foundParcel.address || "N/A"}</span>
                     </div>
                     <div class="detail-item">
+                        <span class="detail-label">Sender Phone</span>
+                        <span class="detail-value">{foundParcel.phoneNumber || "N/A"}</span>
+                    </div>
+                    <div class="detail-item">
                         <span class="detail-label">Expected Delivery</span>
                         <span class="detail-value">{foundParcel.expectedDelivery || "Pending"}</span>
                     </div>
@@ -175,7 +179,13 @@
                     </div>
                     <div class="detail-item">
                         <span class="detail-label">Dimensions</span>
-                        <span class="detail-value">{foundParcel.length}×{foundParcel.width}×{foundParcel.height} cm</span>
+                        <span class="detail-value">
+                            {#if foundParcel.length && foundParcel.width && foundParcel.height}
+                                {foundParcel.length}×{foundParcel.width}×{foundParcel.height} cm
+                            {:else}
+                                N/A
+                            {/if}
+                        </span>
                     </div>
                     <div class="detail-item">
                         <span class="detail-label">Handling</span>

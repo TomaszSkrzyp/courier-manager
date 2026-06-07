@@ -439,7 +439,13 @@
                                                                 </div>
                                                                 <div class="detail-item">
                                                                     <span class="label">Dimensions:</span>
-                                                                    <span class="value">{pkg.length}×{pkg.width}×{pkg.height} cm</span>
+                                                                    <span class="value">
+                                                                        {#if pkg.length && pkg.width && pkg.height}
+                                                                            {pkg.length}×{pkg.width}×{pkg.height} cm
+                                                                        {:else}
+                                                                            N/A
+                                                                        {/if}
+                                                                    </span>
                                                                 </div>
                                                                 <div class="detail-item">
                                                                     <span class="label">Fragile:</span>
