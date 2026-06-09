@@ -7,6 +7,7 @@ import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
 
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import java.time.LocalDateTime;
 
@@ -23,7 +24,8 @@ public class Address {
     private Integer addressId;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "region_id", nullable = true)
+    @NotNull
+    @JoinColumn(name = "region_id", nullable = false)
     private Region region;
 
     @NotBlank
