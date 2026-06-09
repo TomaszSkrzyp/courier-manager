@@ -9,8 +9,12 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import pl.polsl.tab.kurier.dto.ParcelCreateDTO;
 import pl.polsl.tab.kurier.dto.ParcelDTO;
+import pl.polsl.tab.kurier.dto.ParcelPriceRequestDTO;
+import pl.polsl.tab.kurier.model.DeliveryMode;
+import pl.polsl.tab.kurier.repository.DeliveryModeRepository;
 import pl.polsl.tab.kurier.service.ParcelService;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 
@@ -20,6 +24,9 @@ public class ParcelController {
 
     @Autowired
     private ParcelService parcelService;
+
+    @Autowired
+    private DeliveryModeRepository deliveryModeRepository;
 
     @GetMapping
     public ResponseEntity<Page<ParcelDTO>> getParcels(
@@ -34,6 +41,18 @@ public class ParcelController {
         try {
             ParcelDTO created = parcelService.createParcel(dto);
             return ResponseEntity.status(201).body(created);
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    @PostMapping("/calculate-price")
+    public ResponseEntity<?> calculatePrice(@Valid @RequestBody ParcelPriceRequestDTO dto) {
+        try {
+            DeliveryMode deliveryMode = deliveryModeRepository.findById(dto.getDeliveryModeId())
+                    .orElseThrow(() -> new RuntimeException("Delivery mode not found: " + dto.getDeliveryModeId()));
+            BigDecimal price = parcelService.calculatePrice(dto.getWeight(), dto.getHeight(), dto.getWidth(), dto.getLength(), deliveryMode);
+            return ResponseEntity.ok(Map.of("price", price));
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(e.getMessage());
         }

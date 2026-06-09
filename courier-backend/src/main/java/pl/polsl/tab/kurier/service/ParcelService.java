@@ -207,6 +207,12 @@ public class ParcelService {
         double daysToDeliver = (routeLength + 1) * (isExpress ? 1.0 : 1.5);
         parcel.setExpectedTime(LocalDateTime.now().plusHours((long)(daysToDeliver * 24)));
 
+        parcel.setPrice(calculatePrice(dto.getWeight(), dto.getHeight(), dto.getWidth(), dto.getLength(), deliveryMode));
+
+        return ParcelDTO.fromEntity(parcelRepository.save(parcel));
+    }
+
+    public BigDecimal calculatePrice(Double weight, Double height, Double width, Double length, DeliveryMode deliveryMode) {
         // Calculate price using PriceDelta
         PriceDelta delta = priceDeltaRepository.findFirstByOrderByCreatedAtDesc()
                 .orElseGet(() -> {
@@ -221,19 +227,18 @@ public class ParcelService {
                 });
 
         BigDecimal price = BigDecimal.ZERO;
-        if (dto.getWeight() != null) price = price.add(BigDecimal.valueOf(dto.getWeight()).multiply(delta.getWeightDelta()));
-        if (dto.getHeight() != null) price = price.add(BigDecimal.valueOf(dto.getHeight()).multiply(delta.getHeightDelta()));
-        if (dto.getWidth() != null) price = price.add(BigDecimal.valueOf(dto.getWidth()).multiply(delta.getWidthDelta()));
-        if (dto.getLength() != null) price = price.add(BigDecimal.valueOf(dto.getLength()).multiply(delta.getLengthDelta()));
-        
+        if (weight != null) price = price.add(BigDecimal.valueOf(weight).multiply(delta.getWeightDelta()));
+        if (height != null) price = price.add(BigDecimal.valueOf(height).multiply(delta.getHeightDelta()));
+        if (width != null) price = price.add(BigDecimal.valueOf(width).multiply(delta.getWidthDelta()));
+        if (length != null) price = price.add(BigDecimal.valueOf(length).multiply(delta.getLengthDelta()));
+
+        boolean isExpress = deliveryMode.getName().equalsIgnoreCase("EXPRESS");
         if (isExpress) {
             price = price.add(delta.getExpressModeDelta());
         } else {
             price = price.add(delta.getNormalModeDelta());
         }
-        parcel.setPrice(price);
-
-        return ParcelDTO.fromEntity(parcelRepository.save(parcel));
+        return price;
     }
 
     // -------------------------------------------------------------------------

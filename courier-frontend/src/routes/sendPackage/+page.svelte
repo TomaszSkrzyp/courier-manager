@@ -70,6 +70,37 @@
     let isSubmitting = $state(false);
     let errorMessage = $state("");
 
+    let estimatedPrice = $state<number | null>(null);
+
+    $effect(() => {
+        if (form.weight > 0 && form.length > 0 && form.width > 0 && form.height > 0 && form.deliveryModeId > 0) {
+            calculatePrice();
+        } else {
+            estimatedPrice = null;
+        }
+    });
+
+    async function calculatePrice() {
+        try {
+            const res = await fetch("http://localhost:8080/api/parcels/calculate-price", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    weight: form.weight,
+                    height: form.height,
+                    width: form.width,
+                    length: form.length,
+                    deliveryModeId: form.deliveryModeId
+                })
+            });
+            if (res.ok) {
+                const data = await res.json();
+                estimatedPrice = data.price;
+            }
+        } catch (e) {
+            console.error("Failed to calculate price", e);
+        }
+    }
 
     async function handleSubmit(e: SubmitEvent) {
         e.preventDefault();
@@ -103,6 +134,7 @@
     function reset() {
         submitted = false;
         generatedId = "";
+        estimatedPrice = null;
         const normalMode = deliveryModes.find(m => m.name.toUpperCase() === 'NORMAL');
         form = {
             phoneNumber: "",
@@ -292,6 +324,24 @@
             </div>
 
             <div class="submit-section" style="flex-direction: column; align-items: flex-end; gap: 1rem;">
+                {#if estimatedPrice !== null}
+                    <div class="price-card animate-fade-in">
+                        <div class="price-icon">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                <line x1="12" y1="1" x2="12" y2="23"></line>
+                                <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+                            </svg>
+                        </div>
+                        <div class="price-content">
+                            <span class="price-label">Estimated Delivery Cost</span>
+                            <span class="price-value">
+                                {estimatedPrice.toFixed(2)} 
+                                <span class="price-currency">PLN</span>
+                            </span>
+                        </div>
+                    </div>
+                {/if}
+                
                 {#if errorMessage}
                     <div class="glass-panel" style="background: rgba(239, 68, 68, 0.1); border-color: var(--danger); padding: 1rem; color: var(--danger); font-weight: 500; width: 100%;">
                         {errorMessage}
@@ -401,4 +451,73 @@
         color: var(--primary);
         font-family: monospace;
     }
-</style>
+
+    .price-card {
+        display: flex;
+        align-items: center;
+        gap: 1.25rem;
+        padding: 1.25rem 2rem;
+        background: linear-gradient(135deg, var(--primary) 0%, var(--primary-hover) 100%);
+        color: var(--bg-color);
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow-lg), 0 10px 20px -5px rgba(15, 23, 42, 0.3);
+        border: 1px solid rgba(var(--primary-rgb, 255, 255, 255), 0.1);
+        width: fit-content;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .price-card::before {
+        content: '';
+        position: absolute;
+        top: -50%;
+        left: -50%;
+        width: 200%;
+        height: 200%;
+        background: radial-gradient(circle, rgba(14, 165, 233, 0.15) 0%, transparent 70%);
+        pointer-events: none;
+    }
+
+    .price-icon {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 48px;
+        height: 48px;
+        background: rgba(14, 165, 233, 0.2);
+        color: var(--secondary);
+        border-radius: var(--radius-md);
+        flex-shrink: 0;
+    }
+
+    .price-content {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+    }
+
+    .price-label {
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: inherit;
+        opacity: 0.7;
+    }
+
+    .price-value {
+        font-size: 1.75rem;
+        font-weight: 800;
+        color: inherit;
+        line-height: 1;
+        display: flex;
+        align-items: baseline;
+        gap: 0.5rem;
+    }
+
+    .price-currency {
+        font-size: 1rem;
+        font-weight: 600;
+        color: var(--secondary);
+    }
+    </style>
