@@ -70,9 +70,15 @@
                     currentRegionId: p.currentRegionId || 0,
                     phoneNumber: p.phoneNumber || "N/A"
                 })).sort((a: any, b: any) => {
+                    const inPossA = a.status === 'IN_TRANSIT' || a.status === 'OUT_FOR_DELIVERY';
+                    const inPossB = b.status === 'IN_TRANSIT' || b.status === 'OUT_FOR_DELIVERY';
+                    if (inPossA && !inPossB) return -1;
+                    if (!inPossA && inPossB) return 1;
+
                     if (a.deliveryMode === 'EXPRESS' && b.deliveryMode !== 'EXPRESS') return -1;
                     if (a.deliveryMode !== 'EXPRESS' && b.deliveryMode === 'EXPRESS') return 1;
-                    return 0;
+                    
+                    return a.expectedDelivery.localeCompare(b.expectedDelivery);
                 });
             }
         } catch (e) {

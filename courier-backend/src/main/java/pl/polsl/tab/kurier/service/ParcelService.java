@@ -126,6 +126,23 @@ public class ParcelService {
         }).collect(Collectors.toList());
 
         return filtered.stream()
+                .sorted((p1, p2) -> {
+                    String s1 = p1.getStatus().getName();
+                    String s2 = p2.getStatus().getName();
+                    boolean inPoss1 = s1.equals(ParcelStatus.IN_TRANSIT) || s1.equals(ParcelStatus.OUT_FOR_DELIVERY);
+                    boolean inPoss2 = s2.equals(ParcelStatus.IN_TRANSIT) || s2.equals(ParcelStatus.OUT_FOR_DELIVERY);
+                    
+                    if (inPoss1 && !inPoss2) return -1;
+                    if (!inPoss1 && inPoss2) return 1;
+
+                    boolean isExp1 = p1.getDeliveryMode().getName().equalsIgnoreCase("EXPRESS");
+                    boolean isExp2 = p2.getDeliveryMode().getName().equalsIgnoreCase("EXPRESS");
+                    if (isExp1 && !isExp2) return -1;
+                    if (!isExp1 && isExp2) return 1;
+
+                    // Secondary sort by expected time (soonest first)
+                    return p1.getExpectedTime().compareTo(p2.getExpectedTime());
+                })
                 .map(ParcelDTO::fromEntity)
                 .collect(Collectors.toList());
     }
